@@ -65,6 +65,8 @@ class ObjectGene(
         mutableListOf<Gene>().apply { addAll(fixedFields); if (additionalFields!=null) addAll(additionalFields) })
 {
 
+    var extraXmlItemNames: Map<String, String> = emptyMap()
+
     init {
         if (isFixed){
             if (template != null)
@@ -374,138 +376,108 @@ class ObjectGene(
 
             buffer.append("}")
 
-        } else if (mode == GeneUtils.EscapeMode.XML) {
+        }else if (mode == GeneUtils.EscapeMode.XML) {
 
-            // Escape special chars without double-escaping existing XML entities
             fun escapeXmlSafe(s: String): String {
-                return s
-                    // replace & only if it's NOT starting an entity like &lt; &gt; &amp; &quot; &apos;
-                    .replace(Regex("(?<!&)&(?![a-zA-Z]+;)"), "&amp;")
-                    .replace("<", "&lt;")
-                    .replace(">", "&gt;")
-                    .replace("\"", "&quot;")
-                    .replace("'", "&apos;")
+                return s.replace(Regex("(?<!&)&(?![a-zA-Z]+;)"), "&amp;")
+                    .replace("<", "&lt;").replace(">", "&gt;")
+                    .replace("\"", "&quot;").replace("'", "&apos;")
             }
 
-            // Trim surrounding quotes "..." or '...' if present
-            fun stripQuotesIfAny(s: String): String {
-                val t = s.trim()
-                if (t.length >= 2) {
-                    val q = t.first()
-                    if ((q == '"' || q == '\'') && t.last() == q) {
-                        return t.substring(1, t.length - 1)
-                    }
-                }
-                return t
-            }
+            fun singularize(n: String) =
+                if (n.endsWith("s") && n.length > 1)
+                    n.removeSuffix("s").replaceFirstChar { it.uppercase() }
+                else
+                    n.replaceFirstChar { it.uppercase() }
 
-            // True if the string looks like an XML element (eg <x>...</x> or <x/>)
-            fun looksLikeElement(s: String): Boolean {
-                val t = s.trim()
-                return t.startsWith("<") && t.endsWith(">") && Regex("<[A-Za-z_]").containsMatchIn(t)
-            }
-
-            // True if the string is already wrapped with the same tag (attributes allowed)
-            fun looksWrappedAs(tag: String, s: String): Boolean {
-                val t = s.trim()
-                val re = Regex("^\\s*<${Regex.escape(tag)}(?:\\s[^>]*)?>[\\s\\S]*</${Regex.escape(tag)}>\\s*$")
-                return re.containsMatchIn(t)
-            }
-
-            // Parse strings that look like: [<item>..</item>, <item>..</item>]
-            fun parseBracketedXmlListOrNull(s: String): List<String>? {
-                val t = s.trim()
-                if (t.startsWith("[") && t.endsWith("]")) {
-                    val content = t.substring(1, t.length - 1).trim()
-                    if (content.isEmpty()) return emptyList()
-                    // split on commas that are followed by a '<' of the next element
-                    return content.split(Regex("\\s*,\\s*(?=<)")).map { it.trim() }
-                }
-                return null
-            }
-
-            // Core XML serializer. It receives a tag name and a value that can be:
-            // - String (possibly already-XML, or bracketed list-as-string)
-            // - Number/Boolean
-            // - Collection (we expect List<Pair<String, Any?>> as “object” fields)
-            // - Map (rare here, but supported)
-            fun serializeXml(name: String, value: Any?): String {
+            fun serializeXml(name: String, value: Any?, extraXmlItemNames: Map<String, String>): String {
                 if (value == null) return "<$name></$name>"
 
                 return when (value) {
-                    is String -> {
-                        // Remove outer quotes if any (eg "\"USER\"" -> USER)
-                        var t = stripQuotesIfAny(value)
+                    is OptionalGene -> serializeXml(name, value.gene, extraXmlItemNames)
 
-                        // If it is a bracketed list like: [<employees_item>...</employees_item>, ...]
-                        parseBracketedXmlListOrNull(t)?.let { items ->
-                            val joined = items.joinToString("") { it } // do NOT escape, they are XML
-                            return "<$name>$joined</$name>"
+                    is ObjectGene -> {
+                        val children = value.fields.associate { f ->
+                            val childValue = when (f) {
+                                is OptionalGene -> f.gene
+                                else -> f
+                            }
+                            f.name to childValue
                         }
-
-                        // If already wrapped exactly as <name>...</name>, use it as-is (avoid double wrap)
-                        if (looksWrappedAs(name, t)) {
-                            return t
+                        val inner = children.entries.joinToString("") { (k, v) ->
+                            serializeXml(k, v, extraXmlItemNames)
                         }
-
-                        // If it looks like *some* XML element, embed it raw inside <name>...</name>
-                        if (looksLikeElement(t)) {
-                            return "<$name>$t</$name>"
-                        }
-
-                        // Otherwise, plain text -> escape once, safely
-                        "<$name>${escapeXmlSafe(t)}</$name>"
+                        "<$name>$inner</$name>"
                     }
 
-                    is Number, is Boolean -> "<$name>${escapeXmlSafe(value.toString())}</$name>"
-
                     is Collection<*> -> {
-                        // We model "objects" as List<Pair<String, Any?>>, and arrays as list of scalars/elements.
                         if (value.isEmpty()) return "<$name></$name>"
-
-                        val inner = value.joinToString("") { v ->
-                            when (v) {
-                                is Pair<*, *> -> {
-                                    // Object field: first = child tag, second = child value
-                                    val childName = v.first.toString()
-                                    val childVal = v.second
-                                    serializeXml(childName, childVal)
-                                }
-                                else -> {
-                                    // Array item: use <name_item>...</name_item>
-                                    serializeXml("${name}_item", v)
-                                }
-                            }
+                        val itemTag = extraXmlItemNames[name] ?: singularize(name)
+                        val inner = value.joinToString("") { item ->
+                            serializeXml(itemTag, item, extraXmlItemNames)
                         }
                         "<$name>$inner</$name>"
                     }
 
                     is Map<*, *> -> {
                         val inner = value.entries.joinToString("") { (k, v) ->
-                            serializeXml(k.toString(), v)
+                            serializeXml(k.toString(), v, extraXmlItemNames)
                         }
                         "<$name>$inner</$name>"
                     }
 
+                    is ArrayGene<*> -> {
+                        if (value.isEmpty()) return "<$name></$name>"
+
+                        val itemTag = extraXmlItemNames[name] ?: singularize(name)
+
+                        val inner = value.getViewOfElements().joinToString("") { g ->
+                            serializeXml(itemTag, g, extraXmlItemNames)
+                        }
+
+                        "<$name>$inner</$name>"
+                    }
+
+                    is Gene -> {
+                        var raw = value.getValueAsPrintableString(previousGenes, GeneUtils.EscapeMode.XML, targetFormat)
+
+                        if (raw.length > 1 && raw.startsWith("\"") && raw.endsWith("\"")) {
+                            raw = raw.substring(1, raw.length - 1)
+                        }
+
+                        "<$name>${escapeXmlSafe(raw)}</$name>"
+                    }
+
+                    is String, is Number, is Boolean -> {
+                        val raw = value.toString()
+                        val clean = if (raw.length > 1 && raw.startsWith("\"") && raw.endsWith("\"")) {
+                            raw.substring(1, raw.length - 1)
+                        } else {
+                            raw
+                        }
+                        "<$name>${escapeXmlSafe(clean)}</$name>"
+                    }
+
                     else -> {
-                        // Fallback reflection (should not be needed when we pass List<Pair<...>>)
                         val fields = value::class.java.declaredFields
                         fields.forEach { it.isAccessible = true }
                         val inner = fields.joinToString("") { f ->
-                            serializeXml(f.name, f.get(value))
+                            serializeXml(f.name, f.get(value), extraXmlItemNames)
                         }
                         "<$name>$inner</$name>"
                     }
                 }
             }
 
-            // Build children as (fieldName -> printableString) pairs
-            val children: List<Pair<String, Any?>> = includedFields.map { f ->
-                f.name to f.getValueAsPrintableString(previousGenes, mode, targetFormat)
+            val children: Map<String, Any?> = includedFields.associate { f ->
+                val value = when (f) {
+                    is OptionalGene -> f.gene
+                    else -> f
+                }
+                f.name to value
             }
 
-            // Serialize the root element with its children
-            val xmlPayload = serializeXml(name, children)
+            val xmlPayload = serializeXml(name, children, this.extraXmlItemNames)
             buffer.append(xmlPayload)
         } else if (mode == GeneUtils.EscapeMode.X_WWW_FORM_URLENCODED) {
 

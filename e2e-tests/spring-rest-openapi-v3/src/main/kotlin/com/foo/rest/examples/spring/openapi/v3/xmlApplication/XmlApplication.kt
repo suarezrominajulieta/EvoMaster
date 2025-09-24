@@ -6,6 +6,7 @@ import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfi
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import javax.validation.Valid
 import javax.validation.constraints.Max
 import javax.validation.constraints.Min
 import javax.validation.constraints.NotBlank
@@ -30,7 +31,7 @@ open class XmlApplication {
         consumes = [MediaType.APPLICATION_XML_VALUE],
         produces = [MediaType.TEXT_PLAIN_VALUE]
     )
-    fun xmlToString(@RequestBody input: Person): ResponseEntity<String> {
+    fun xmlToString(@Valid @RequestBody input: Person): ResponseEntity<String> {
         return if (input.age in 20..30) {
             ResponseEntity.ok("ok")
         } else {
@@ -44,7 +45,7 @@ open class XmlApplication {
         consumes = [MediaType.TEXT_PLAIN_VALUE],
         produces = [MediaType.APPLICATION_XML_VALUE]
     )
-    fun stringToXml(@RequestBody input: String): ResponseEntity<Person> {
+    fun stringToXml(@Valid @RequestBody input: String): ResponseEntity<Person> {
         val name = input.trim()
         return ResponseEntity.ok(Person(name, age = 25))
     }
@@ -54,7 +55,7 @@ open class XmlApplication {
         consumes = [MediaType.APPLICATION_XML_VALUE],
         produces = [MediaType.TEXT_PLAIN_VALUE]
     )
-    fun companyEndpoint(@RequestBody company: Company): ResponseEntity<String> {
+    fun companyEndpoint(@Valid @RequestBody company: Company): ResponseEntity<String> {
         return if (company.employees.size > 2 && company.employees.any { it.age > 40 }) {
             ResponseEntity.ok("big company with seniors")
         } else {
@@ -67,13 +68,46 @@ open class XmlApplication {
         consumes = [MediaType.APPLICATION_XML_VALUE],
         produces = [MediaType.TEXT_PLAIN_VALUE]
     )
-    fun employeeEndpoint(@RequestBody emp: Employee): ResponseEntity<String> {
+    fun employeeEndpoint(@Valid @RequestBody emp: Employee): ResponseEntity<String> {
         return if (emp.role == Role.ADMIN && emp.person.age > 30) {
             ResponseEntity.ok("experienced admin")
         } else {
             ResponseEntity.ok("not admin or too young")
         }
     }
+    // 3. Department
+    @PostMapping(
+        path = ["/department"],
+        consumes = [MediaType.APPLICATION_XML_VALUE],
+        produces = [MediaType.TEXT_PLAIN_VALUE]
+    )
+    fun departmentEndpoint(@RequestBody dept: Department): ResponseEntity<String> {
+        return if (dept.employees.isEmpty()) {
+            ResponseEntity.ok("empty department")
+        } else {
+            ResponseEntity.ok("department with ${dept.employees.size} employees")
+        }
+    }
+
+    // 4. Organization
+    @PostMapping(
+        path = ["/organization"],
+        consumes = [MediaType.APPLICATION_XML_VALUE],
+        produces = [MediaType.TEXT_PLAIN_VALUE]
+    )
+    fun organizationEndpoint(@RequestBody org: Organization): ResponseEntity<String> {
+        return ResponseEntity.ok("organization ${org.name} with ${org.people.size} people")
+    }
+
+    // 5. Tagged person
+    /*@PostMapping(
+        path = ["/tagged-person"],
+        consumes = [MediaType.APPLICATION_XML_VALUE],
+        produces = [MediaType.TEXT_PLAIN_VALUE]
+    )
+    fun taggedPersonEndpoint(@RequestBody tp: TaggedPerson): ResponseEntity<String> {
+        return ResponseEntity.ok("tagged ${tp.person.name} with id ${tp.id}")
+    }*/
 }
 
 @XmlRootElement(name = "person")
@@ -98,3 +132,25 @@ data class Employee(
     var person: Person = Person(),
     var role: Role = Role.USER
 )
+
+@XmlRootElement(name = "department")
+data class Department(
+    var name: String = "",
+    var employees: List<Employee> = mutableListOf(),
+    var subDepartments: List<Department> = mutableListOf()
+)
+
+@XmlRootElement(name = "organization")
+data class Organization(
+    var name: String = "",
+    var people: List<Person> = mutableListOf(),
+    var employees: List<Employee> = mutableListOf(),
+    var companies: List<Company> = mutableListOf()
+)
+
+/*@XmlRootElement(name = "taggedPerson")
+data class TaggedPerson(
+ @field:XmlAttribute
+    var id: String = "",
+    var person: Person = Person()
+)*/

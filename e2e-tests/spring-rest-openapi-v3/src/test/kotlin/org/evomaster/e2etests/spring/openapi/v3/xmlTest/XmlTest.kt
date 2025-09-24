@@ -38,22 +38,18 @@ class XmlEMTest : SpringTestBase() {
             setOutputFormat(args, outputFormat)
 
             val solution = initAndRun(args)
-            assertTrue(solution.individuals.size >= 1)
-            assertHasAtLeastOne(
-                solution,
-                HttpVerb.POST,
-                200,
-                "/api/xml/receive-string-respond-xml",
-                null
-            )
+            assertTrue(solution.individuals.isNotEmpty())
 
-            assertHasAtLeastOne(
-                solution,
-                HttpVerb.POST,
-                200,
-                "/api/xml/receive-xml-respond-string",
-                null
-            )
+            assertHasAtLeastOne(solution, HttpVerb.POST, 200, "/api/xml/receive-string-respond-xml", null)
+            assertHasAtLeastOne(solution, HttpVerb.POST, 200, "/api/xml/receive-xml-respond-string", null)
+
+
+            assertHasAtLeastOne(solution, HttpVerb.POST, 200, "/api/xml/company", null)
+            assertHasAtLeastOne(solution, HttpVerb.POST, 200, "/api/xml/employee", null)
+
+            assertHasAtLeastOne( solution, HttpVerb.POST, 200, "/api/xml/department", null )
+            assertHasAtLeastOne( solution, HttpVerb.POST, 200, "/api/xml/organization", null )
+            //assertHasAtLeastOne( solution, HttpVerb.POST, 200, "/api/xml/tagged-person", null )
         }
 
     }

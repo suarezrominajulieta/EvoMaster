@@ -759,6 +759,19 @@ object RestActionBuilderV3 {
         val bodyParam = BodyParam(gene, contentTypeGene)
             .apply { this.description = description }
 
+        if (gene is ObjectGene && obj.schema?.properties != null) {
+            val map = mutableMapOf<String, String>()
+            for ((propName, propSchema) in obj.schema.properties) {
+                val xmlName = propSchema.xml?.name ?: propName
+                map[propName] = xmlName
+                
+                if (propSchema.type == "array" && propSchema.items?.xml?.name != null) {
+                    map["${propName}[]"] = propSchema.items.xml.name
+                }
+            }
+            gene.extraXmlItemNames = map
+        }
+
         val ns = bodyParam.notSupportedContentTypes
         if(ns.isNotEmpty()){
             messages.add("Not supported content types for body payload in $verb:$restPath : ${ns.joinToString()}")
