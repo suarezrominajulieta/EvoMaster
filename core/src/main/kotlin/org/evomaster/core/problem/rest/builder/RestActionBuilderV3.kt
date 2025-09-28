@@ -764,7 +764,7 @@ object RestActionBuilderV3 {
             for ((propName, propSchema) in obj.schema.properties) {
                 val xmlName = propSchema.xml?.name ?: propName
                 map[propName] = xmlName
-                
+
                 if (propSchema.type == "array" && propSchema.items?.xml?.name != null) {
                     map["${propName}[]"] = propSchema.items.xml.name
                 }

@@ -376,7 +376,7 @@ class ObjectGene(
 
             buffer.append("}")
 
-        }else if (mode == GeneUtils.EscapeMode.XML) {
+        } else if (mode == GeneUtils.EscapeMode.XML) {
 
             fun escapeXmlSafe(s: String): String {
                 return s.replace(Regex("(?<!&)&(?![a-zA-Z]+;)"), "&amp;")
@@ -397,15 +397,12 @@ class ObjectGene(
                     is OptionalGene -> serializeXml(name, value.gene, extraXmlItemNames)
 
                     is ObjectGene -> {
-                        val children = value.fields.associate { f ->
+                        val inner = value.fields.joinToString("") { f ->
                             val childValue = when (f) {
                                 is OptionalGene -> f.gene
                                 else -> f
                             }
-                            f.name to childValue
-                        }
-                        val inner = children.entries.joinToString("") { (k, v) ->
-                            serializeXml(k, v, extraXmlItemNames)
+                            serializeXml(f.name, childValue, extraXmlItemNames)
                         }
                         "<$name>$inner</$name>"
                     }
@@ -469,7 +466,7 @@ class ObjectGene(
                 }
             }
 
-            val children: Map<String, Any?> = includedFields.associate { f ->
+            val children: List<Pair<String, Any?>> = includedFields.map { f ->
                 val value = when (f) {
                     is OptionalGene -> f.gene
                     else -> f
@@ -477,7 +474,11 @@ class ObjectGene(
                 f.name to value
             }
 
-            val xmlPayload = serializeXml(name, children, this.extraXmlItemNames)
+            val inner = children.joinToString("") { (n, v) ->
+                serializeXml(n, v, this.extraXmlItemNames)
+            }
+
+            val xmlPayload = "<$name>$inner</$name>"
             buffer.append(xmlPayload)
         } else if (mode == GeneUtils.EscapeMode.X_WWW_FORM_URLENCODED) {
 
