@@ -759,7 +759,7 @@ object RestActionBuilderV3 {
         val bodyParam = BodyParam(gene, contentTypeGene)
             .apply { this.description = description }
 
-        if (gene is ObjectGene && obj.schema?.properties != null) {
+        if (deref?.xml != null && gene is ObjectGene && obj.schema?.properties != null) {
             val map = mutableMapOf<String, String>()
             for ((propName, propSchema) in obj.schema.properties) {
                 val xmlName = propSchema.xml?.name ?: propName
