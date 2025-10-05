@@ -744,7 +744,7 @@ object RestActionBuilderV3 {
         }
 
         val deref = obj.schema.`$ref`?.let { ref -> val name = ref.substringAfterLast("/")
-            schemaHolder.main.schemaParsed.components.schemas[name] } ?: obj.schema
+            SchemaUtils.getReferenceSchema(schemaHolder, currentSchema, ref, messages) } ?: obj.schema
 
         name = deref?.xml?.name ?: deref?.`$ref`?.substringAfterLast("/") ?: "body"
 
@@ -759,17 +759,81 @@ object RestActionBuilderV3 {
         val bodyParam = BodyParam(gene, contentTypeGene)
             .apply { this.description = description }
 
-        if (deref?.xml != null && gene is ObjectGene && obj.schema?.properties != null) {
-            val map = mutableMapOf<String, String>()
-            for ((propName, propSchema) in obj.schema.properties) {
-                val xmlName = propSchema.xml?.name ?: propName
-                map[propName] = xmlName
+        val schemaProps = deref?.properties ?: obj.schema?.properties
+        val contentTypeIsXml = bodies.keys.any { it.contains("xml", ignoreCase = true) }
 
-                if (propSchema.type == "array" && propSchema.items?.xml?.name != null) {
-                    map["${propName}[]"] = propSchema.items.xml.name
+        if (contentTypeIsXml && schemaProps != null) {
+
+            fun buildMapsFromProps(props: Map<String, Schema<*>>?): Pair<Map<String, String>, Map<String, Boolean>> {
+                val nm = mutableMapOf<String, String>()
+                val am = mutableMapOf<String, Boolean>()
+                if (props == null) return Pair(nm, am)
+                for ((pName, schema) in props) {
+                    val derefSchema = schema.`$ref`?.let { ref ->
+                        SchemaUtils.getReferenceSchema(schemaHolder, currentSchema, ref, messages)
+                    } ?: schema
+
+                    val xmlName = derefSchema.xml?.name ?: pName
+                    nm[pName] = xmlName
+
+                    if (derefSchema.type == "array" && derefSchema.items != null) {
+                        val itemDeref = derefSchema.items.`$ref`?.let { ref ->
+                            SchemaUtils.getReferenceSchema(schemaHolder, currentSchema, ref, messages)
+                        } ?: derefSchema.items
+
+                        val itemXmlName = itemDeref.xml?.name ?: "${pName}Item"
+                        nm["${pName}[]"] = itemXmlName
+
+                        if (itemDeref.xml?.attribute == true) {
+                            am[itemXmlName] = true
+                        }
+                    }
+
+                    if (derefSchema.xml?.attribute == true) {
+                        am[xmlName] = true
+                    }
+                }
+                return Pair(nm, am)
+            }
+
+            fun propagateXml(g: Gene, props: Map<String, Schema<*>>) {
+                val targetObj = when (g) {
+                    is ObjectGene -> g
+                    is OptionalGene -> g.gene as? ObjectGene
+                    else -> null
+                } ?: return
+
+                val (nm, am) = buildMapsFromProps(props)
+                targetObj.extraXmlItemNames = nm
+                targetObj.extraXmlAttributes = am
+
+                for ((propName, propSchema) in props) {
+                    val childGeneRaw = targetObj.fields.find { it.name == propName } ?: continue
+                    val childGene: Gene = if (childGeneRaw is OptionalGene) childGeneRaw.gene else childGeneRaw
+
+                    val childDeref: Schema<*> = propSchema.`$ref`?.let { ref ->
+                        SchemaUtils.getReferenceSchema(schemaHolder, currentSchema, ref, messages)
+                    } ?: propSchema
+
+                    childDeref.properties?.let { childProps ->
+                        propagateXml(childGene, childProps)
+                    }
+
+                    if (propSchema.type == "array") {
+                        val itemSchema = propSchema.items
+                        val itemDeref = itemSchema?.`$ref`?.let { ref ->
+                            SchemaUtils.getReferenceSchema(schemaHolder, currentSchema, ref, messages)
+                        } ?: itemSchema
+
+                        itemDeref?.properties?.let { itemProps ->
+                            val templ = if (childGene is ArrayGene<*>) childGene.template else childGene
+                            if (templ is ObjectGene) propagateXml(templ, itemProps)
+                        }
+                    }
                 }
             }
-            gene.extraXmlItemNames = map
+
+            propagateXml(gene, schemaProps)
         }
 
         val ns = bodyParam.notSupportedContentTypes

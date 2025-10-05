@@ -49,7 +49,7 @@ class XmlEMTest : SpringTestBase() {
 
             assertHasAtLeastOne( solution, HttpVerb.POST, 200, "/api/xml/department", null )
             assertHasAtLeastOne( solution, HttpVerb.POST, 200, "/api/xml/organization", null )
-            //assertHasAtLeastOne( solution, HttpVerb.POST, 200, "/api/xml/tagged-person", null )
+            assertHasAtLeastOne( solution, HttpVerb.POST, 200, "/api/xml/tagged-person", null )
         }
 
     }

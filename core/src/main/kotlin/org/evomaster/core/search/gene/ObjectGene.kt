@@ -66,6 +66,7 @@ class ObjectGene(
 {
 
     var extraXmlItemNames: Map<String, String> = emptyMap()
+    var extraXmlAttributes: Map<String, Boolean> = emptyMap()
 
     init {
         if (isFixed){
@@ -106,7 +107,10 @@ class ObjectGene(
     override fun canBeChildless() = true
 
     override fun copyContent(): Gene {
-        return ObjectGene(name, fixedFields.map(Gene::copy), refType, isFixed, template, additionalFields?.map {it.copy() as PairGene<StringGene, Gene> }?.toMutableList())
+        val clone = ObjectGene( name, fixedFields.map(Gene::copy), refType, isFixed, template, additionalFields?.map { it.copy() as PairGene<StringGene, Gene> }?.toMutableList())
+        clone.extraXmlItemNames = this.extraXmlItemNames.toMap()
+        clone.extraXmlAttributes = this.extraXmlAttributes.toMap()
+        return clone
     }
 
     override fun checkForLocallyValidIgnoringChildren(): Boolean {
@@ -178,6 +182,12 @@ class ObjectGene(
         val copy = template!!.copy() as PairGene<StringGene, FlexibleGene>
         copy.randomize(randomness, false)
 
+        val secondGene: Gene = copy.second as Gene
+        if (secondGene is ObjectGene) {
+            secondGene.extraXmlItemNames = this.extraXmlItemNames.toMap()
+            secondGene.extraXmlAttributes = this.extraXmlAttributes.toMap()
+        }
+
         if (existingKey(copy)){
             copy.randomize(randomness, false)
         }
@@ -227,7 +237,8 @@ class ObjectGene(
                 ok
             }, true
         )
-
+        this.extraXmlItemNames = other.extraXmlItemNames.toMap()
+        this.extraXmlAttributes = other.extraXmlAttributes.toMap()
         return updateOk
     }
 
@@ -260,7 +271,10 @@ class ObjectGene(
 
 
         // TODO for additional fields
-        return ObjectGene(this.name, fixedFields, refType, isFixed, null, null)
+        val clone = ObjectGene(this.name, fixedFields, refType, isFixed, null, null)
+        clone.extraXmlItemNames = this.extraXmlItemNames.toMap()
+        clone.extraXmlAttributes = this.extraXmlAttributes.toMap()
+        return clone
     }
 
     override fun isMutable(): Boolean {
@@ -397,19 +411,50 @@ class ObjectGene(
                     is OptionalGene -> serializeXml(name, value.gene, extraXmlItemNames)
 
                     is ObjectGene -> {
-                        val inner = value.fields.joinToString("") { f ->
+                        val attrMap = value.extraXmlAttributes
+                        val attrs = value.fields.filter { f ->
+                            val xmlName = value.extraXmlItemNames[f.name] ?: f.name
+                            attrMap[xmlName] == true
+                        }.joinToString(" ") { f ->
                             val childValue = when (f) {
                                 is OptionalGene -> f.gene
                                 else -> f
                             }
-                            serializeXml(f.name, childValue, extraXmlItemNames)
+                            val raw = {
+                                var v = childValue.getValueAsPrintableString(previousGenes, GeneUtils.EscapeMode.XML, targetFormat)
+                                if (v.length > 1 && v.startsWith("\"") && v.endsWith("\"")) {
+                                    v = v.substring(1, v.length - 1)
+                                }
+                                escapeXmlSafe(v)
+                            }
+
+                            val xmlName = value.extraXmlItemNames.get(f.name) ?: f.name
+                            "$xmlName=\"$raw\""
                         }
-                        "<$name>$inner</$name>"
+
+                        val inner = value.fields.filter { f ->
+                            val xmlName = value.extraXmlItemNames.get(f.name) ?: f.name
+                            attrMap[xmlName] != true
+                        }.joinToString("") { f ->
+                            val childValue = when (f) {
+                                is OptionalGene -> f.gene
+                                else -> f
+                            }
+                            val xmlName = value.extraXmlItemNames.get(f.name) ?: f.name
+                            serializeXml(xmlName, childValue, extraXmlItemNames)
+                        }
+
+                        if (inner.isEmpty()) {
+                            "<$name${if (attrs.isNotEmpty()) " $attrs" else ""}/>"
+                        } else {
+                            "<$name${if (attrs.isNotEmpty()) " $attrs" else ""}>$inner</$name>"
+                        }
                     }
 
                     is Collection<*> -> {
                         if (value.isEmpty()) return "<$name></$name>"
-                        val itemTag = extraXmlItemNames[name] ?: singularize(name)
+                        val itemTag = extraXmlItemNames["${name}[]"]?.takeUnless { it.equals(name, ignoreCase = true) }
+                            ?: singularize(name)
                         val inner = value.joinToString("") { item ->
                             serializeXml(itemTag, item, extraXmlItemNames)
                         }
@@ -426,7 +471,8 @@ class ObjectGene(
                     is ArrayGene<*> -> {
                         if (value.isEmpty()) return "<$name></$name>"
 
-                        val itemTag = extraXmlItemNames[name] ?: singularize(name)
+                        val itemTag = extraXmlItemNames["${name}[]"]?.takeUnless { it.equals(name, ignoreCase = true) }
+                            ?: singularize(name)
 
                         val inner = value.getViewOfElements().joinToString("") { g ->
                             serializeXml(itemTag, g, extraXmlItemNames)
@@ -466,19 +512,52 @@ class ObjectGene(
                 }
             }
 
-            val children: List<Pair<String, Any?>> = includedFields.map { f ->
+            val rootAttrMap = this.extraXmlAttributes
+
+            val rootAttrFields = includedFields.filter { f ->
+                val xmlName = this.extraXmlItemNames[f.name] ?: f.name
+                rootAttrMap[xmlName] == true
+            }
+            val childFields = includedFields.filter { f ->
+                val xmlName = this.extraXmlItemNames[f.name] ?: f.name
+                rootAttrMap[xmlName] != true
+            }
+
+            val rootAttrsString = rootAttrFields.joinToString(" ") { f ->
+                val childValue = when (f) {
+                    is OptionalGene -> f.gene
+                    else -> f
+                }
+                val raw = {
+                    var v = childValue.getValueAsPrintableString(previousGenes, GeneUtils.EscapeMode.XML, targetFormat)
+                    if (v.length > 1 && v.startsWith("\"") && v.endsWith("\"")) {
+                        v = v.substring(1, v.length - 1)
+                    }
+                    escapeXmlSafe(v)
+                }
+                val xmlName = this.extraXmlItemNames[f.name] ?: f.name
+                "$xmlName=\"$raw\""
+            }
+
+            val childrenForInner: List<Pair<String, Any?>> = childFields.map { f ->
                 val value = when (f) {
                     is OptionalGene -> f.gene
                     else -> f
                 }
-                f.name to value
+                val xmlName = this.extraXmlItemNames[f.name] ?: f.name
+                xmlName to value
             }
 
-            val inner = children.joinToString("") { (n, v) ->
+            val inner = childrenForInner.joinToString("") { (n, v) ->
                 serializeXml(n, v, this.extraXmlItemNames)
             }
 
-            val xmlPayload = "<$name>$inner</$name>"
+            val xmlPayload = if (inner.isEmpty()) {
+                "<$name${if (rootAttrsString.isNotEmpty()) " $rootAttrsString" else ""}/>"
+            } else {
+                "<$name${if (rootAttrsString.isNotEmpty()) " $rootAttrsString" else ""}>$inner</$name>"
+            }
+
             buffer.append(xmlPayload)
         } else if (mode == GeneUtils.EscapeMode.X_WWW_FORM_URLENCODED) {
 

@@ -10,8 +10,24 @@ import javax.validation.Valid
 import javax.validation.constraints.Max
 import javax.validation.constraints.Min
 import javax.validation.constraints.NotBlank
+import javax.xml.bind.annotation.XmlAccessType
+import javax.xml.bind.annotation.XmlAccessorType
+import javax.xml.bind.annotation.XmlAttribute
+import javax.xml.bind.annotation.XmlElement
 import javax.xml.bind.annotation.XmlRootElement
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.http.converter.HttpMessageConverter
+import org.springframework.http.converter.xml.Jaxb2RootElementHttpMessageConverter
 
+@Configuration
+open class XmlConfig {
+
+    @Bean
+    open fun jaxb2Converter(): HttpMessageConverter<*> {
+        return Jaxb2RootElementHttpMessageConverter()
+    }
+}
 
 @SpringBootApplication(exclude = [SecurityAutoConfiguration::class])
 @RestController
@@ -100,22 +116,22 @@ open class XmlApplication {
     }
 
     // 5. Tagged person
-    /*@PostMapping(
+    @PostMapping(
         path = ["/tagged-person"],
         consumes = [MediaType.APPLICATION_XML_VALUE],
         produces = [MediaType.TEXT_PLAIN_VALUE]
     )
     fun taggedPersonEndpoint(@RequestBody tp: TaggedPerson): ResponseEntity<String> {
         return ResponseEntity.ok("tagged ${tp.person.name} with id ${tp.id}")
-    }*/
+    }
 }
 
-@XmlRootElement(name = "person")
-data class Person(
-    @field:NotBlank
+@XmlRootElement(name = "person", namespace = "")
+@XmlAccessorType(XmlAccessType.FIELD)
+open class Person(
+    @field:XmlElement(namespace = "")
     var name: String = "",
-    @field:Min(18)
-    @field:Max(99)
+    @field:XmlElement(namespace = "")
     var age: Int = 0
 )
 
@@ -148,9 +164,11 @@ data class Organization(
     var companies: List<Company> = mutableListOf()
 )
 
-/*@XmlRootElement(name = "taggedPerson")
-data class TaggedPerson(
- @field:XmlAttribute
+@XmlRootElement(name = "taggedPerson", namespace = "")
+@XmlAccessorType(XmlAccessType.FIELD)
+open class TaggedPerson(
+    @XmlAttribute
     var id: String = "",
+    @field:XmlElement(namespace = "")
     var person: Person = Person()
-)*/
+)
