@@ -429,7 +429,7 @@ class ObjectGene(
                             }
 
                             val xmlName = value.extraXmlItemNames.get(f.name) ?: f.name
-                            "$xmlName=\"$raw\""
+                            "$xmlName=\"${raw()}\""
                         }
 
                         val inner = value.fields.filter { f ->
@@ -536,7 +536,7 @@ class ObjectGene(
                     escapeXmlSafe(v)
                 }
                 val xmlName = this.extraXmlItemNames[f.name] ?: f.name
-                "$xmlName=\"$raw\""
+                "$xmlName=\"${raw()}\""
             }
 
             val childrenForInner: List<Pair<String, Any?>> = childFields.map { f ->

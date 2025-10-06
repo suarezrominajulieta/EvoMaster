@@ -19,6 +19,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.converter.HttpMessageConverter
 import org.springframework.http.converter.xml.Jaxb2RootElementHttpMessageConverter
+import javax.validation.constraints.Pattern
 
 @Configuration
 open class XmlConfig {
@@ -121,7 +122,7 @@ open class XmlApplication {
         consumes = [MediaType.APPLICATION_XML_VALUE],
         produces = [MediaType.TEXT_PLAIN_VALUE]
     )
-    fun taggedPersonEndpoint(@RequestBody tp: TaggedPerson): ResponseEntity<String> {
+    fun taggedPersonEndpoint(@Valid @RequestBody tp: TaggedPerson): ResponseEntity<String> {
         return ResponseEntity.ok("tagged ${tp.person.name} with id ${tp.id}")
     }
 }
