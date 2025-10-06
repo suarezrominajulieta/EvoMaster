@@ -445,7 +445,7 @@ class ObjectGene(
                         }
 
                         if (inner.isEmpty()) {
-                            "<$name${if (attrs.isNotEmpty()) " $attrs" else ""}/>"
+                            "<$name${if (attrs.isNotEmpty()) " $attrs" else ""}></$name>"
                         } else {
                             "<$name${if (attrs.isNotEmpty()) " $attrs" else ""}>$inner</$name>"
                         }
@@ -553,7 +553,7 @@ class ObjectGene(
             }
 
             val xmlPayload = if (inner.isEmpty()) {
-                "<$name${if (rootAttrsString.isNotEmpty()) " $rootAttrsString" else ""}/>"
+                "<$name${if (rootAttrsString.isNotEmpty()) " $rootAttrsString" else ""}></$name>"
             } else {
                 "<$name${if (rootAttrsString.isNotEmpty()) " $rootAttrsString" else ""}>$inner</$name>"
             }
