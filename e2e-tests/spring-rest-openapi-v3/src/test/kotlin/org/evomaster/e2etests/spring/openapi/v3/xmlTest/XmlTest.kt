@@ -42,14 +42,15 @@ class XmlEMTest : SpringTestBase() {
 
             assertHasAtLeastOne(solution, HttpVerb.POST, 200, "/api/xml/receive-string-respond-xml", null)
             assertHasAtLeastOne(solution, HttpVerb.POST, 200, "/api/xml/receive-xml-respond-string", null)
-
-
             assertHasAtLeastOne(solution, HttpVerb.POST, 200, "/api/xml/company", null)
             assertHasAtLeastOne(solution, HttpVerb.POST, 200, "/api/xml/employee", null)
-
             assertHasAtLeastOne( solution, HttpVerb.POST, 200, "/api/xml/department", null )
             assertHasAtLeastOne( solution, HttpVerb.POST, 200, "/api/xml/organization", null )
             assertHasAtLeastOne( solution, HttpVerb.POST, 200, "/api/xml/tagged-person", null )
+            assertHasAtLeastOne( solution, HttpVerb.POST, 200, "/api/xml/employee-with-attr", null )
+            assertHasAtLeastOne( solution, HttpVerb.POST, 200, "/api/xml/group-with-attrs", null )
+            assertHasAtLeastOne( solution, HttpVerb.POST, 200, "/api/xml/project", null )
+            assertHasAtLeastOne( solution, HttpVerb.POST, 200, "/api/xml/projects", null )
         }
 
     }
