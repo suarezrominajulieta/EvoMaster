@@ -30,16 +30,15 @@ class XmlEMTest : SpringTestBase() {
     }
 
     fun testRunEMGeneric(basicAssertions: Boolean, className: ClassName, outputFormat: OutputFormat? = OutputFormat.JAVA_JUNIT_5){
-
-        val lambda = { args : MutableList<String> ->
-            args.add("--enableBasicAssertions")
-            args.add(basicAssertions.toString())
-
-            setOutputFormat(args, outputFormat)
+        runTestHandlingFlakyAndCompilation(
+            "XmlEM",
+            "org.foo.XmlEM",
+            10
+        ) { args: List<String> ->
 
             val solution = initAndRun(args)
-            assertTrue(solution.individuals.isNotEmpty())
 
+            assertTrue(solution.individuals.size >= 1)
             assertHasAtLeastOne(solution, HttpVerb.POST, 200, "/api/xml/receive-string-respond-xml", null)
             assertHasAtLeastOne(solution, HttpVerb.POST, 200, "/api/xml/receive-xml-respond-string", null)
             assertHasAtLeastOne(solution, HttpVerb.POST, 200, "/api/xml/company", null)
