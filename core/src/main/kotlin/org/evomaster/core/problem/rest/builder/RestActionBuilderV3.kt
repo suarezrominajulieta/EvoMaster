@@ -41,6 +41,7 @@ import org.evomaster.core.search.gene.datetime.DateGene
 import org.evomaster.core.search.gene.datetime.DateTimeGene
 import org.evomaster.core.search.gene.datetime.FormatForDatesAndTimes
 import org.evomaster.core.search.gene.datetime.TimeGene
+import org.evomaster.core.search.gene.jsonPatch.JsonPatchGene
 import org.evomaster.core.search.gene.numeric.*
 import org.evomaster.core.search.gene.wrapper.ChoiceGene
 import org.evomaster.core.search.gene.wrapper.CustomMutationRateGene
@@ -51,6 +52,7 @@ import org.evomaster.core.search.gene.regex.RegexGene
 import org.evomaster.core.search.gene.string.Base64StringGene
 import org.evomaster.core.search.gene.string.StringGene
 import org.evomaster.core.search.gene.utils.GeneUtils
+import org.evomaster.core.search.service.Randomness
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.net.URI
@@ -705,7 +707,7 @@ object RestActionBuilderV3 {
         }
 
         var name = "body"
-        val description = operation.description ?: null
+        var description = operation.description ?: null
 
         val bodies = resolvedBody.content?.filter {
             /*
@@ -747,6 +749,26 @@ object RestActionBuilderV3 {
             SchemaUtils.getReferenceSchema(schemaHolder, currentSchema, ref, messages) } ?: obj.schema
 
         name = deref?.xml?.name ?: deref?.`$ref`?.substringAfterLast("/") ?: "body"
+
+        if (bodies.keys.any { it.equals("application/json-patch+json", ignoreCase = true) }) {
+            try {
+                val gene = JsonPatchGene("jsonPatchBody")
+                gene.randomize(Randomness(), true)
+
+                val contentTypeGene = EnumGene<String>("contentType", bodies.keys)
+                val bodyParam = BodyParam(gene, contentTypeGene).apply {
+                    description = operation.description ?: "JSON Patch body"
+                }
+
+                params.add(bodyParam)
+                messages.add("✅ Added custom JsonPatchGene for $restPath")
+                return  // 👈 importantísimo: evita seguir abajo
+            } catch (e: Exception) {
+                messages.add("❌ Failed to handle JsonPatch for $restPath: ${e.message}")
+                e.printStackTrace()
+                return
+            }
+        }
 
         var gene = getGene(name, obj.schema, schemaHolder,currentSchema, referenceClassDef = null, options = options, messages = messages, examples = examples)
 

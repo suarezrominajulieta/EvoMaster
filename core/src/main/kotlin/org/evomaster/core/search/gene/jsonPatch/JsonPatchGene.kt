@@ -10,27 +10,25 @@ import org.evomaster.core.search.service.mutator.genemutation.SubsetGeneMutation
 import org.slf4j.LoggerFactory
 
 
-class JsonPatchGene(
-    name: String,
-    var operations: MutableList<JsonPatchOperationGene> = mutableListOf()
-) : CompositeGene(name, operations) {
+class JsonPatchGene(name: String) : CompositeGene(name, mutableListOf()) {
+
     companion object {
         private val log = LoggerFactory.getLogger(JsonPatchGene::class.java)
         private val VALID_OPS = listOf("add", "remove", "replace", "move", "copy", "test")
     }
 
-    override fun copyContent(): Gene {
-        val clone = JsonPatchGene(name, operations.map { it.copy() as JsonPatchOperationGene }.toMutableList())
-        return clone
-    }
+    val operations: List<JsonPatchOperationGene>
+        get() = getViewOfChildren().filterIsInstance<JsonPatchOperationGene>()
+
+    override fun copyContent(): Gene = JsonPatchGene(name)
 
     override fun randomize(randomness: Randomness, tryToForceNewValue: Boolean) {
-        operations.clear()
+        getViewOfChildren().toList().forEach { killChild(it) }
         val numOps = randomness.nextInt(1, 5)
-        repeat(numOps) {
-            val opGene = JsonPatchOperationGene("op_$it")
+        repeat(numOps) { idx ->
+            val opGene = JsonPatchOperationGene("op_$idx")
+            addChild(opGene)
             opGene.randomize(randomness, tryToForceNewValue)
-            operations.add(opGene)
         }
     }
 
@@ -63,8 +61,8 @@ class JsonPatchGene(
     @Deprecated("Not used")
     override fun setValueBasedOn(gene: Gene): Boolean {
         if (gene !is JsonPatchGene) return false
-        operations.clear()
-        operations.addAll(gene.operations.map { it.copy() as JsonPatchOperationGene })
+        getViewOfChildren().toList().forEach { killChild(it) }
+        gene.operations.forEach { addChild(it.copy() as JsonPatchOperationGene) }
         return true
     }
 

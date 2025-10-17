@@ -27,7 +27,8 @@ class JsonPatchOperationGene(
 
     private fun updateChildren() {
         // Primero eliminamos todos los hijos existentes
-        getViewOfChildren().forEach { killChild(it) }
+        val oldChildren = getViewOfChildren().toList()
+        oldChildren.forEach { killChild(it) }
 
         // Agregamos los hijos actuales
         addChild(op)
