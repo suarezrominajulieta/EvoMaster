@@ -483,12 +483,11 @@ class ObjectGene(
 
                     is Gene -> {
                         var raw = value.getValueAsPrintableString(previousGenes, GeneUtils.EscapeMode.XML, targetFormat)
-
                         if (raw.length > 1 && raw.startsWith("\"") && raw.endsWith("\"")) {
                             raw = raw.substring(1, raw.length - 1)
                         }
 
-                        "<$name>${escapeXmlSafe(raw)}</$name>"
+                        escapeXmlSafe(raw)
                     }
 
                     is String, is Number, is Boolean -> {
@@ -498,7 +497,7 @@ class ObjectGene(
                         } else {
                             raw
                         }
-                        "<$name>${escapeXmlSafe(clean)}</$name>"
+                        escapeXmlSafe(clean)
                     }
 
                     else -> {

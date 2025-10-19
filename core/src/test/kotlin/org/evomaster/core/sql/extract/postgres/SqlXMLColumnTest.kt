@@ -92,7 +92,7 @@ class SqlXMLColumnTest : ExtractTestBasePostgres() {
 
         assertTrue(xmlDataValue is PgSQLXML)
         xmlDataValue as PgSQLXML
-        assertEquals("<anElement><integerElement>0</integerElement></anElement>", xmlDataValue.string)
+        assertEquals("<anElement>0</anElement>", xmlDataValue.string)
     }
 
     @Test
@@ -123,7 +123,7 @@ class SqlXMLColumnTest : ExtractTestBasePostgres() {
 
         assertTrue(xmlDataValue is PgSQLXML)
         xmlDataValue as PgSQLXML
-        assertEquals("<anElement><booleanElement>false</booleanElement></anElement>", xmlDataValue.string)
+        assertEquals("<anElement>false</anElement>", xmlDataValue.string)
     }
 
     @Test
@@ -154,7 +154,7 @@ class SqlXMLColumnTest : ExtractTestBasePostgres() {
 
         assertTrue(xmlDataValue is PgSQLXML)
         xmlDataValue as PgSQLXML
-        assertEquals("<anElement><stringElement>Hello World</stringElement></anElement>", xmlDataValue.string)
+        assertEquals("<anElement>Hello World</anElement>", xmlDataValue.string)
     }
 
     @Test
@@ -185,7 +185,7 @@ class SqlXMLColumnTest : ExtractTestBasePostgres() {
 
         assertTrue(xmlDataValue is PgSQLXML)
         xmlDataValue as PgSQLXML
-        assertEquals("<anElement><stringElement>&lt;xml&gt;This should be escaped&lt;/xml&gt;</stringElement></anElement>", xmlDataValue.string)
+        assertEquals("<anElement>&lt;xml&gt;This should be escaped&lt;/xml&gt;</anElement>", xmlDataValue.string)
     }
 
 

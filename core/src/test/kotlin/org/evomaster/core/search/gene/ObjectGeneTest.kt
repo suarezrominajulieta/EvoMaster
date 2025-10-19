@@ -38,28 +38,28 @@ internal class ObjectGeneTest {
     fun testIntegerGene() {
         val gene = ObjectGene("anElement", listOf(IntegerGene("integerValue", value = 0)))
         val actual = gene.getValueAsPrintableString(mode = GeneUtils.EscapeMode.XML)
-        Assertions.assertEquals("<anElement><integerValue>0</integerValue></anElement>", actual)
+        Assertions.assertEquals("<anElement>0</anElement>", actual)
     }
 
     @Test
     fun testBooleanGene() {
         val gene = ObjectGene("anElement", listOf(BooleanGene("booleanValue", value = false)))
         val actual = gene.getValueAsPrintableString(mode = GeneUtils.EscapeMode.XML)
-        Assertions.assertEquals("<anElement><booleanValue>false</booleanValue></anElement>", actual)
+        Assertions.assertEquals("<anElement>false</anElement>", actual)
     }
 
     @Test
     fun testStringGene() {
         val gene = ObjectGene("anElement", listOf(StringGene("stringValue", value = "Hello World")))
         val actual = gene.getValueAsPrintableString(mode = GeneUtils.EscapeMode.XML)
-        Assertions.assertEquals("<anElement><stringValue>Hello World</stringValue></anElement>", actual)
+        Assertions.assertEquals("<anElement>Hello World</anElement>", actual)
     }
 
     @Test
     fun testEscapedStringGene() {
         val gene = ObjectGene("anElement", listOf(StringGene("stringValue", value = "<xml>This should be escaped</xml>")))
         val actual = gene.getValueAsPrintableString(mode = GeneUtils.EscapeMode.XML)
-        Assertions.assertEquals("<anElement><stringValue>&lt;xml&gt;This should be escaped&lt;/xml&gt;</stringValue></anElement>", actual)
+        Assertions.assertEquals("<anElement>&lt;xml&gt;This should be escaped&lt;/xml&gt;</anElement>", actual)
     }
 
     @Test

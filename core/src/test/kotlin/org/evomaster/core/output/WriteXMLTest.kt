@@ -136,7 +136,7 @@ class WriteXMLTest : WriterTestBase() {
             add("List<InsertionDto> insertions = sql().insertInto(\"Table0\", 0L)")
             indent()
             indent()
-            add(".d(\"xmlColumn\", \"\\\"<anElement><stringValue>&lt;/element&gt;</stringValue></anElement>\\\"\")")
+            add(".d(\"xmlColumn\", \"\\\"<anElement>&lt;/element&gt;</anElement>\\\"\")")
             deindent()
             add(".dtos();")
             deindent()
