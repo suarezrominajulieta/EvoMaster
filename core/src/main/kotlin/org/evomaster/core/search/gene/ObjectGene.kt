@@ -404,18 +404,6 @@ class ObjectGene(
                 else
                     n.replaceFirstChar { it.uppercase() }
 
-            fun removeValueWrapper(raw: String): String {
-                val wrappers = listOf("stringValue", "booleanValue", "integerValue", "floatValue", "doubleValue")
-                for (tag in wrappers) {
-                    val open = "<$tag>"
-                    val close = "</$tag>"
-                    if (raw.startsWith(open) && raw.endsWith(close)) {
-                        return raw.removePrefix(open).removeSuffix(close)
-                    }
-                }
-                return raw
-            }
-
             fun serializeXml(name: String, value: Any?, extraXmlItemNames: Map<String, String>): String {
                 if (value == null) return "<$name></$name>"
 
@@ -494,25 +482,27 @@ class ObjectGene(
                     }
 
                     is Gene -> {
-                        var raw = value.getValueAsPrintableString(previousGenes, GeneUtils.EscapeMode.XML, targetFormat)
-                        raw = removeValueWrapper(raw)
+                        val raw = value.getValueAsPrintableString(previousGenes, GeneUtils.EscapeMode.XML, targetFormat)
+                        val clean = if (raw.length > 1 && raw.startsWith("\"") && raw.endsWith("\"")) {
+                            raw.substring(1, raw.length - 1)
+                        } else raw
+
+                        val isPrimitiveGene = value !is ObjectGene && value !is ArrayGene<*> && value !is Map<*, *>
+
+                        if (isPrimitiveGene) {
+                            "<$name>${escapeXmlSafe(clean)}</$name>"
+                        } else {
+                            serializeXml(name, clean, extraXmlItemNames)
+                        }
+                    }
+
+                    is String, is Number, is Boolean -> {
+                        var raw = value.toString()
                         if (raw.length > 1 && raw.startsWith("\"") && raw.endsWith("\"")) {
                             raw = raw.substring(1, raw.length - 1)
                         }
 
-                        escapeXmlSafe(raw)
                         "<$name>${escapeXmlSafe(raw)}</$name>"
-                    }
-
-                    is String, is Number, is Boolean -> {
-                        val raw = value.toString()
-                        val clean = if (raw.length > 1 && raw.startsWith("\"") && raw.endsWith("\"")) {
-                            raw.substring(1, raw.length - 1)
-                        } else {
-                            raw
-                        }
-                        escapeXmlSafe(clean)
-                        "<$name>${escapeXmlSafe(value.toString())}</$name>"
                     }
 
                     else -> {
