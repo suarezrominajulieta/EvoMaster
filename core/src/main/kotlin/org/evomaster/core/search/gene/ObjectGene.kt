@@ -404,6 +404,12 @@ class ObjectGene(
                 else
                     n.replaceFirstChar { it.uppercase() }
 
+            fun isPrimitiveGene(value: Any?): Boolean = when (value) {
+                is StringGene, is BooleanGene, is IntegerGene,
+                is DoubleGene, is FloatGene -> true
+                else -> false
+            }
+
             fun serializeXml(name: String, value: Any?, extraXmlItemNames: Map<String, String>): String {
                 if (value == null) return "<$name></$name>"
 
@@ -487,12 +493,12 @@ class ObjectGene(
                             raw.substring(1, raw.length - 1)
                         } else raw
 
-                        val isPrimitiveGene = value !is ObjectGene && value !is ArrayGene<*> && value !is Map<*, *>
-
-                        if (isPrimitiveGene) {
+                        if (isPrimitiveGene(value)) {
                             "<$name>${escapeXmlSafe(clean)}</$name>"
+                        } else if (value is ObjectGene || value is ArrayGene<*> || value is Map<*, *>) {
+                            serializeXml(name, value, extraXmlItemNames)
                         } else {
-                            serializeXml(name, clean, extraXmlItemNames)
+                            "<$name>${escapeXmlSafe(clean)}</$name>"
                         }
                     }
 
