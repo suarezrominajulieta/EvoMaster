@@ -750,7 +750,6 @@ object RestActionBuilderV3 {
 
         var gene = getGene(name, obj.schema, schemaHolder,currentSchema, referenceClassDef = null, options = options, messages = messages, examples = examples)
 
-
         if (resolvedBody.required != true && gene !is OptionalGene) {
             gene = OptionalGene(name, gene)
         }

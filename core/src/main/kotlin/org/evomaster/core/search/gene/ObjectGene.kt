@@ -392,198 +392,109 @@ class ObjectGene(
 
         } else if (mode == GeneUtils.EscapeMode.XML) {
 
-            fun escapeXmlSafe(s: String): String {
-                return s.replace(Regex("(?<!&)&(?![a-zA-Z]+;)"), "&amp;")
-                    .replace("<", "&lt;").replace(">", "&gt;")
-                    .replace("\"", "&quot;").replace("'", "&apos;")
+            fun escapeXmlSafe(s: String): String =
+                s.replace(Regex("(?<!&)&(?![a-zA-Z]+;)"), "&amp;")
+                    .replace("<", "&lt;")
+                    .replace(">", "&gt;")
+                    .replace("\"", "&quot;")
+                    .replace("'", "&apos;")
+
+            fun singularize(n: String) = when {
+                n.endsWith("s") && n.length > 1 -> n.removeSuffix("s")
+                else -> n
+            }.replaceFirstChar { it.uppercase() }
+
+            fun unwrap(v: Any?): Any? = when (v) {
+                is OptionalGene -> v.gene
+                else -> v
             }
 
-            fun singularize(n: String) =
-                if (n.endsWith("s") && n.length > 1)
-                    n.removeSuffix("s").replaceFirstChar { it.uppercase() }
-                else
-                    n.replaceFirstChar { it.uppercase() }
+            fun cleanXmlValueString(v: String): String =
+                v.removeSurrounding("\"").let(::escapeXmlSafe)
 
-            fun isPrimitiveGene(value: Any?): Boolean = when (value) {
-                is StringGene, is BooleanGene, is IntegerGene,
-                is DoubleGene, is FloatGene -> true
+            fun getPrintedValue(v: Gene): String =
+                cleanXmlValueString(v.getValueAsPrintableString(previousGenes, GeneUtils.EscapeMode.XML, targetFormat))
+
+            fun isPrimitiveGene(value: Any?): Boolean = when (unwrap(value)) {
+                is StringGene, is BooleanGene, is IntegerGene, is DoubleGene, is FloatGene,
+                is String, is Number, is Boolean -> true
                 else -> false
             }
 
-            fun serializeXml(name: String, value: Any?, extraXmlItemNames: Map<String, String>): String {
-                if (value == null) return "<$name></$name>"
+            fun serializeXml(name: String, value: Any?, extra: Map<String, String>): String {
+                val v = unwrap(value) ?: return "<$name></$name>"
 
-                return when (value) {
-                    is OptionalGene -> serializeXml(name, value.gene, extraXmlItemNames)
-
+                return when (v) {
                     is ObjectGene -> {
-                        val attrMap = value.extraXmlAttributes
-                        val attrs = value.fields.filter { f ->
-                            val xmlName = value.extraXmlItemNames[f.name] ?: f.name
-                            attrMap[xmlName] == true
+                        val attrs = v.fields.filter { f ->
+                            val xmlName = extra[f.name] ?: f.name
+                            v.extraXmlAttributes[xmlName] == true
                         }.joinToString(" ") { f ->
-                            val childValue = when (f) {
-                                is OptionalGene -> f.gene
-                                else -> f
-                            }
-                            val raw = {
-                                var v = childValue.getValueAsPrintableString(previousGenes, GeneUtils.EscapeMode.XML, targetFormat)
-                                if (v.length > 1 && v.startsWith("\"") && v.endsWith("\"")) {
-                                    v = v.substring(1, v.length - 1)
-                                }
-                                escapeXmlSafe(v)
-                            }
-
-                            val xmlName = value.extraXmlItemNames[f.name] ?: f.name
-                            "$xmlName=\"${raw()}\""
+                            val xmlName = extra[f.name] ?: f.name
+                            "$xmlName=\"${getPrintedValue(unwrap(f) as Gene)}\""
                         }
 
-                        val inner = value.fields.filter { f ->
-                            val xmlName = value.extraXmlItemNames[f.name] ?: f.name
-                            attrMap[xmlName] != true
+                        val inner = v.fields.filter { f ->
+                            val xmlName = extra[f.name] ?: f.name
+                            v.extraXmlAttributes[xmlName] != true
                         }.joinToString("") { f ->
-                            val childValue = when (f) {
-                                is OptionalGene -> f.gene
-                                else -> f
-                            }
-                            val xmlName = value.extraXmlItemNames[f.name] ?: f.name
-                            serializeXml(xmlName, childValue, extraXmlItemNames)
+                            val xmlName = extra[f.name] ?: f.name
+                            serializeXml(xmlName, unwrap(f), extra)
                         }
 
-                        if (inner.isEmpty()) {
-                            "<$name${if (attrs.isNotEmpty()) " $attrs" else ""}></$name>"
-                        } else {
-                            "<$name${if (attrs.isNotEmpty()) " $attrs" else ""}>$inner</$name>"
-                        }
+                        "<$name${if (attrs.isNotEmpty()) " $attrs" else ""}>$inner</$name>"
                     }
 
-                    is Collection<*> -> {
-                        if (value.isEmpty()) return "<$name></$name>"
-                        val itemTag = extraXmlItemNames["${name}[]"]?.takeUnless { it.equals(name, ignoreCase = true) }
-                            ?: singularize(name)
-                        val inner = value.joinToString("") { item ->
-                            serializeXml(itemTag, item, extraXmlItemNames)
-                        }
-                        "<$name>$inner</$name>"
+                    is Collection<*> -> v.joinToString("", "<$name>", "</$name>") {
+                        val itemName = extra["${name}[]"] ?: singularize(name)
+                        serializeXml(itemName, it, extra)
                     }
 
-                    is Map<*, *> -> {
-                        val inner = value.entries.joinToString("") { (k, v) ->
-                            serializeXml(k.toString(), v, extraXmlItemNames)
-                        }
-                        "<$name>$inner</$name>"
+                    is Map<*, *> -> v.entries.joinToString("", "<$name>", "</$name>") {
+                        serializeXml(it.key.toString(), it.value, extra)
                     }
 
                     is ArrayGene<*> -> {
-                        if (value.isEmpty()) return "<$name></$name>"
-
-                        val itemTag = extraXmlItemNames["${name}[]"]?.takeUnless { it.equals(name, ignoreCase = true) }
-                            ?: singularize(name)
-
-                        val inner = value.getViewOfElements().joinToString("") { g ->
-                            serializeXml(itemTag, g, extraXmlItemNames)
+                        val itemName = extra["${name}[]"] ?: singularize(name)
+                        v.getViewOfElements().joinToString("", "<$name>", "</$name>") {
+                            serializeXml(itemName, it, extra)
                         }
-
-                        "<$name>$inner</$name>"
                     }
 
-                    is Gene -> {
-                        var raw = value.getValueAsPrintableString(previousGenes, GeneUtils.EscapeMode.XML, targetFormat)
+                    is Gene -> "<$name>${getPrintedValue(v)}</$name>"
 
-                        if (raw.length > 1 && raw.startsWith("\"") && raw.endsWith("\"")) {
-                            raw = raw.substring(1, raw.length - 1)
-                        }
-
-                        "<$name>${escapeXmlSafe(raw)}</$name>"
-                    }
-
-                    is String, is Number, is Boolean -> {
-                        var raw = value.toString()
-                        if (raw.length > 1 && raw.startsWith("\"") && raw.endsWith("\"")) {
-                            raw = raw.substring(1, raw.length - 1)
-                        }
-
-                        "<$name>${escapeXmlSafe(raw)}</$name>"
-                    }
-
-                    else -> {
-                        val fields = value::class.java.declaredFields
-                        fields.forEach { it.isAccessible = true }
-                        val inner = fields.joinToString("") { f ->
-                            serializeXml(f.name, f.get(value), extraXmlItemNames)
-                        }
-                        "<$name>$inner</$name>"
-                    }
+                    else -> "<$name>${cleanXmlValueString(v.toString())}</$name>"
                 }
             }
 
-            val rootAttrMap = this.extraXmlAttributes
+            val rootAttrsString = includedFields
+                .filter { f ->
+                    val xmlName = this.extraXmlItemNames[f.name] ?: f.name
+                    this.extraXmlAttributes[xmlName] == true
+                }
+                .joinToString(" ") { f ->
+                    val xmlName = this.extraXmlItemNames[f.name] ?: f.name
+                    "$xmlName=\"${getPrintedValue(unwrap(f) as Gene)}\""
+                }
 
-            val rootAttrFields = includedFields.filter { f ->
-                val xmlName = this.extraXmlItemNames[f.name] ?: f.name
-                rootAttrMap[xmlName] == true
-            }
             val childFields = includedFields.filter { f ->
                 val xmlName = this.extraXmlItemNames[f.name] ?: f.name
-                rootAttrMap[xmlName] != true
+                this.extraXmlAttributes[xmlName] != true
             }
 
-            val rootAttrsString = rootAttrFields.joinToString(" ") { f ->
-                val childValue = when (f) {
-                    is OptionalGene -> f.gene
-                    else -> f
-                }
-                val raw = {
-                    var v = childValue.getValueAsPrintableString(previousGenes, GeneUtils.EscapeMode.XML, targetFormat)
-                    if (v.length > 1 && v.startsWith("\"") && v.endsWith("\"")) {
-                        v = v.substring(1, v.length - 1)
-                    }
-                    escapeXmlSafe(v)
-                }
+            val inner = childFields.joinToString("") { f ->
                 val xmlName = this.extraXmlItemNames[f.name] ?: f.name
-                "$xmlName=\"${raw()}\""
-            }
-
-            val childrenForInner: List<Pair<String, Any?>> = childFields.map { f ->
-                val value = when (f) {
-                    is OptionalGene -> f.gene
-                    else -> f
-                }
-                val xmlName = this.extraXmlItemNames[f.name] ?: f.name
-                xmlName to value
-            }
-
-            val inner = childrenForInner.joinToString("") { (n, v) ->
-                serializeXml(n, v, this.extraXmlItemNames)
+                serializeXml(xmlName, unwrap(f), this.extraXmlItemNames)
             }
 
             val singleField = childFields.singleOrNull()
-            val isSinglePrimitiveChild = singleField?.let {
-                when (it) {
-                    is OptionalGene -> isPrimitiveGene(it.gene)
-                    else -> isPrimitiveGene(it)
-                }
-            } ?: false
+            val inlinePrimitive = singleField?.let{ isPrimitiveGene(unwrap(it)) } == true
 
-            val xmlPayload = if (isSinglePrimitiveChild && childFields.size == 1) {
-                val childValue = singleField!!.let { f ->
-                    val v = when (f) {
-                        is OptionalGene -> f.gene
-                        else -> f
-                    }
-                    var raw = v.getValueAsPrintableString(previousGenes, GeneUtils.EscapeMode.XML, targetFormat)
-                    if (raw.length > 1 && raw.startsWith("\"") && raw.endsWith("\"")) {
-                        raw = raw.substring(1, raw.length - 1)
-                    }
-                    escapeXmlSafe(raw)
-                }
-                "<$name${
-                    if (rootAttrsString.isNotEmpty()) " $rootAttrsString" else ""
-                }>$childValue</$name>"
+            val xmlPayload = if (inlinePrimitive) {
+                val childValue = getPrintedValue(unwrap(singleField!!) as Gene)
+                "<$name${if (rootAttrsString.isNotEmpty()) " $rootAttrsString" else ""}>$childValue</$name>"
             } else {
-                "<$name${
-                    if (rootAttrsString.isNotEmpty()) " $rootAttrsString" else ""
-                }>$inner</$name>"
+                "<$name${if (rootAttrsString.isNotEmpty()) " $rootAttrsString" else ""}>$inner</$name>"
             }
 
             buffer.append(xmlPayload)
