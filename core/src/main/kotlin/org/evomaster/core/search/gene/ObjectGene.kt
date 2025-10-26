@@ -434,19 +434,19 @@ class ObjectGene(
                                 escapeXmlSafe(v)
                             }
 
-                            val xmlName = value.extraXmlItemNames.get(f.name) ?: f.name
+                            val xmlName = value.extraXmlItemNames[f.name] ?: f.name
                             "$xmlName=\"${raw()}\""
                         }
 
                         val inner = value.fields.filter { f ->
-                            val xmlName = value.extraXmlItemNames.get(f.name) ?: f.name
+                            val xmlName = value.extraXmlItemNames[f.name] ?: f.name
                             attrMap[xmlName] != true
                         }.joinToString("") { f ->
                             val childValue = when (f) {
                                 is OptionalGene -> f.gene
                                 else -> f
                             }
-                            val xmlName = value.extraXmlItemNames.get(f.name) ?: f.name
+                            val xmlName = value.extraXmlItemNames[f.name] ?: f.name
                             serializeXml(xmlName, childValue, extraXmlItemNames)
                         }
 
@@ -488,18 +488,13 @@ class ObjectGene(
                     }
 
                     is Gene -> {
-                        val raw = value.getValueAsPrintableString(previousGenes, GeneUtils.EscapeMode.XML, targetFormat)
-                        val clean = if (raw.length > 1 && raw.startsWith("\"") && raw.endsWith("\"")) {
-                            raw.substring(1, raw.length - 1)
-                        } else raw
+                        var raw = value.getValueAsPrintableString(previousGenes, GeneUtils.EscapeMode.XML, targetFormat)
 
-                        if (isPrimitiveGene(value)) {
-                            "<$name>${escapeXmlSafe(clean)}</$name>"
-                        } else if (value is ObjectGene || value is ArrayGene<*> || value is Map<*, *>) {
-                            serializeXml(name, value, extraXmlItemNames)
-                        } else {
-                            "<$name>${escapeXmlSafe(clean)}</$name>"
+                        if (raw.length > 1 && raw.startsWith("\"") && raw.endsWith("\"")) {
+                            raw = raw.substring(1, raw.length - 1)
                         }
+
+                        "<$name>${escapeXmlSafe(raw)}</$name>"
                     }
 
                     is String, is Number, is Boolean -> {
@@ -562,10 +557,33 @@ class ObjectGene(
                 serializeXml(n, v, this.extraXmlItemNames)
             }
 
-            val xmlPayload = if (inner.isEmpty()) {
-                "<$name${if (rootAttrsString.isNotEmpty()) " $rootAttrsString" else ""}></$name>"
+            val singleField = childFields.singleOrNull()
+            val isSinglePrimitiveChild = singleField?.let {
+                when (it) {
+                    is OptionalGene -> isPrimitiveGene(it.gene)
+                    else -> isPrimitiveGene(it)
+                }
+            } ?: false
+
+            val xmlPayload = if (isSinglePrimitiveChild && childFields.size == 1) {
+                val childValue = singleField!!.let { f ->
+                    val v = when (f) {
+                        is OptionalGene -> f.gene
+                        else -> f
+                    }
+                    var raw = v.getValueAsPrintableString(previousGenes, GeneUtils.EscapeMode.XML, targetFormat)
+                    if (raw.length > 1 && raw.startsWith("\"") && raw.endsWith("\"")) {
+                        raw = raw.substring(1, raw.length - 1)
+                    }
+                    escapeXmlSafe(raw)
+                }
+                "<$name${
+                    if (rootAttrsString.isNotEmpty()) " $rootAttrsString" else ""
+                }>$childValue</$name>"
             } else {
-                "<$name${if (rootAttrsString.isNotEmpty()) " $rootAttrsString" else ""}>$inner</$name>"
+                "<$name${
+                    if (rootAttrsString.isNotEmpty()) " $rootAttrsString" else ""
+                }>$inner</$name>"
             }
 
             buffer.append(xmlPayload)
