@@ -34,7 +34,6 @@ open class JsonPatchApplication {
     fun patchPerson(@RequestBody patch: JsonNode): ResponseEntity<Person> {
         val mapper = ObjectMapper()
 
-        // Simula la aplicación del patch (sin necesidad de librería externa)
         patch.forEach { op ->
             val path = op["path"]?.asText()
             val value = op["value"]

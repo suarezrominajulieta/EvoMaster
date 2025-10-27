@@ -26,11 +26,9 @@ class JsonPatchOperationGene(
     }
 
     private fun updateChildren() {
-        // Primero eliminamos todos los hijos existentes
         val oldChildren = getViewOfChildren().toList()
         oldChildren.forEach { killChild(it) }
 
-        // Agregamos los hijos actuales
         addChild(op)
         addChild(path)
         value?.let { addChild(it) }
@@ -93,13 +91,10 @@ class JsonPatchOperationGene(
     override fun copyValueFrom(other: Gene): Boolean = setValueBasedOn(other)
 
     override fun randomize(randomness: Randomness, tryToForceNewValue: Boolean) {
-        // Elegir operación válida al azar
         op.value = randomness.choose(VALID_OPS)
 
-        // Generar un path aleatorio (string alfanumérico)
         path.value = "/" + randomAlphanumeric(randomness, 5)
 
-        // Dependiendo de la operación, asignar 'value' o 'from'
         when (op.value) {
             "add", "replace", "test" -> {
                 value = StringGene("value", randomAlphanumeric(randomness, 4))
@@ -118,7 +113,6 @@ class JsonPatchOperationGene(
         updateChildren()
     }
 
-    // Función helper para generar strings alfanuméricos
     private fun randomAlphanumeric(randomness: Randomness, length: Int): String {
         val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
         return (1..length)
