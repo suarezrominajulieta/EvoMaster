@@ -1,4 +1,4 @@
-package com.foo.rest.examples.spring.openapi.v3.xmlApplication
+package com.foo.rest.examples.spring.openapi.v3.xml
 
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
@@ -7,9 +7,6 @@ import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import javax.validation.Valid
-import javax.validation.constraints.Max
-import javax.validation.constraints.Min
-import javax.validation.constraints.NotBlank
 import javax.xml.bind.annotation.XmlAccessType
 import javax.xml.bind.annotation.XmlAccessorType
 import javax.xml.bind.annotation.XmlAttribute
@@ -19,7 +16,6 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.converter.HttpMessageConverter
 import org.springframework.http.converter.xml.Jaxb2RootElementHttpMessageConverter
-import javax.validation.constraints.Pattern
 
 @Configuration
 open class XmlConfig {

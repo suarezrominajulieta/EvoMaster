@@ -1,4 +1,4 @@
-import com.foo.rest.examples.spring.openapi.v3.xmlController.XmlController
+import com.foo.rest.examples.spring.openapi.v3.xml.XmlController
 import org.evomaster.core.EMConfig
 import org.evomaster.core.output.OutputFormat
 import org.evomaster.core.problem.rest.data.HttpVerb
