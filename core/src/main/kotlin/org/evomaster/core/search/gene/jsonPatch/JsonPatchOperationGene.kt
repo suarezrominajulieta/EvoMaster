@@ -25,7 +25,7 @@ class JsonPatchOperationGene(
         updateChildren()
     }
 
-    private fun updateChildren() {
+    fun updateChildren() {
         val oldChildren = getViewOfChildren().toList()
         oldChildren.forEach { killChild(it) }
 
@@ -40,9 +40,11 @@ class JsonPatchOperationGene(
             name,
             op.copy() as StringGene,
             path.copy() as StringGene,
-            value?.copy(),
-            from?.copy()
+            value?.copy() as? Gene,
+            from?.copy() as? Gene
         )
+        clone.updateChildren()
+
         return clone
     }
 

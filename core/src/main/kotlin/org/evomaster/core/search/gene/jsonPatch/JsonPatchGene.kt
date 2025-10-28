@@ -20,17 +20,27 @@ class JsonPatchGene(name: String) : CompositeGene(name, mutableListOf()) {
     val operations: List<JsonPatchOperationGene>
         get() = getViewOfChildren().filterIsInstance<JsonPatchOperationGene>()
 
-    override fun copyContent(): Gene = JsonPatchGene(name)
+    override fun copyContent(): Gene {
+        val clone = JsonPatchGene(name)
+
+        operations.forEach { op ->
+            clone.addChild(op.copy() as JsonPatchOperationGene)
+        }
+
+        return clone
+    }
 
     override fun randomize(randomness: Randomness, tryToForceNewValue: Boolean) {
         getViewOfChildren().toList().forEach { killChild(it) }
         val numOps = randomness.nextInt(1, 5)
         repeat(numOps) { idx ->
             val opGene = JsonPatchOperationGene("op_$idx")
-            addChild(opGene)
             opGene.randomize(randomness, tryToForceNewValue)
+            opGene.doInitialize(randomness)
+            addChild(opGene)
         }
     }
+
 
     override fun getValueAsPrintableString(previousGenes: List<Gene>, mode: GeneUtils.EscapeMode?, targetFormat: OutputFormat?, extraCheck: Boolean): String {
         val opsStr = operations.joinToString(",") {

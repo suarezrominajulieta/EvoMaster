@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*
 
 @SpringBootApplication(exclude = [SecurityAutoConfiguration::class])
 @RestController
-@RequestMapping("/api/jsonPatch")
+@RequestMapping("/api")
 open class JsonPatchApplication {
 
     companion object {
@@ -31,7 +31,29 @@ open class JsonPatchApplication {
         consumes = ["application/json-patch+json"],
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    fun patchPerson(@RequestBody patch: JsonNode): ResponseEntity<Person> {
+    fun patchPerson(@RequestBody patch: JsonNode): ResponseEntity<out Any?>? {
+
+        for (op in patch) {
+            val operation = op["op"]?.asText() ?: return bad("Missing 'op'")
+            val path = op["path"]?.asText() ?: return bad("Missing 'path'")
+
+            when(operation){
+                "move", "copy" -> {
+                    if (op["from"] == null)
+                        return bad("'from' required for $operation")
+                }
+                "remove" -> {
+                    if (op.has("value"))
+                        return bad("'value' must NOT be present for remove")
+                }
+                "replace", "add", "test" -> {
+                    if (!op.has("value"))
+                        return bad("'value' required for $operation")
+                }
+                else -> return bad("Unsupported operation: $operation")
+            }
+        }
+
         val mapper = ObjectMapper()
 
         patch.forEach { op ->
@@ -50,6 +72,9 @@ open class JsonPatchApplication {
         return ResponseEntity.ok(person)
     }
 }
+
+private fun bad(msg: String) =
+    ResponseEntity.badRequest().body(mapOf("error" to msg))
 
 data class Person(
     var name: String = "",

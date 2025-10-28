@@ -762,7 +762,7 @@ object RestActionBuilderV3 {
 
                 params.add(bodyParam)
                 messages.add("✅ Added custom JsonPatchGene for $restPath")
-                return  // 👈 importantísimo: evita seguir abajo
+                return
             } catch (e: Exception) {
                 messages.add("❌ Failed to handle JsonPatch for $restPath: ${e.message}")
                 e.printStackTrace()
