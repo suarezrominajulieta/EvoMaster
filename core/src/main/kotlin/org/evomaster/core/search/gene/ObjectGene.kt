@@ -37,7 +37,7 @@ import java.net.URLEncoder
  *              - type: string
  *              - type: integer
  */
-class ObjectGene(
+open class ObjectGene(
         name: String,
         val fixedFields: List<out Gene>,
         val refType: String? = null,
@@ -372,19 +372,11 @@ class ObjectGene(
 
         } else if (mode == GeneUtils.EscapeMode.XML) {
 
-            // TODO might have to handle here: <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-            /*
-                Note: this is a very basic support, which should not really depend
-                much on. Problem is that we would need to access to the XSD schema
-                to decide when fields should be represented with tags or attributes
-             */
-
             buffer.append(openXml(name))
             includedFields.forEach {
-                //FIXME put back, but then update all broken tests
-                //buffer.append(openXml(it.name))
+                buffer.append(openXml(it.name))
                 buffer.append(it.getValueAsPrintableString(previousGenes, mode, targetFormat))
-                //buffer.append(closeXml(it.name))
+                buffer.append(closeXml(it.name))
             }
             buffer.append(closeXml(name))
 

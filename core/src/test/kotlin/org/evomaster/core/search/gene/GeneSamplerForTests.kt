@@ -133,6 +133,7 @@ object GeneSamplerForTests {
             PatternCharacterBlockGene::class -> samplePatternCharacterBlock(rand) as T
             QuantifierRxGene::class -> sampleQuantifierRxGene(rand) as T
             RegexGene::class -> sampleRegexGene(rand) as T
+            ObjectGeneWithAttributes::class -> sampleObjectGeneWithAttributes(rand) as T
 
             //SQL genes
             SqlJSONPathGene::class -> sampleSqlJSONPathGene(rand) as T
@@ -596,6 +597,36 @@ object GeneSamplerForTests {
                     isFixed = isFixed,
                     template = PairGene("template", sampleStringGene(rand), samplePrintableTemplate(selection, rand)),
                     additionalFields = mutableListOf()
+            )
+        }
+    }
+
+    fun sampleObjectGeneWithAttributes(rand: Randomness): ObjectGeneWithAttributes {
+
+        val selection = geneClasses.filter { !it.isAbstract }
+        val isFixed = rand.nextBoolean()
+
+        return if (isFixed) {
+            ObjectGeneWithAttributes(
+                name = "rand ObjectGeneWithAttributes ${rand.nextInt()}",
+                fields = listOf(
+                    sample(rand.choose(selection), rand),
+                    sample(rand.choose(selection), rand),
+                    sample(rand.choose(selection), rand)
+                )
+            )
+        }else{
+            ObjectGeneWithAttributes(
+                name = "rand ObjectGeneWithAttributes ${rand.nextInt()}",
+                fixedFields = listOf(
+                    sample(rand.choose(selection), rand),
+                    sample(rand.choose(selection), rand),
+                    sample(rand.choose(selection), rand)
+                ),
+                refType = null,
+                isFixed = isFixed,
+                template = PairGene("template", sampleStringGene(rand), samplePrintableTemplate(selection, rand)),
+                additionalFields = mutableListOf()
             )
         }
     }
