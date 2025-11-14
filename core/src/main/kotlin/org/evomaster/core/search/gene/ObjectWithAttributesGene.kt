@@ -1,13 +1,11 @@
 package org.evomaster.core.search.gene
 
 import org.evomaster.core.output.OutputFormat
-import org.evomaster.core.search.gene.collection.FixedMapGene
 import org.evomaster.core.search.gene.collection.PairGene
 import org.evomaster.core.search.gene.string.StringGene
 import org.evomaster.core.search.gene.utils.GeneUtils
-import org.evomaster.core.search.gene.wrapper.FlexibleGene
 
-class ObjectGeneWithAttributes(
+class ObjectWithAttributesGene(
     name: String,
     fixedFields: List<Gene>,
     refType: String? = null,
@@ -27,7 +25,7 @@ class ObjectGeneWithAttributes(
             ?.filterIsInstance<PairGene<StringGene, Gene>>()
             ?.toMutableList()
 
-        return ObjectGeneWithAttributes(
+        return ObjectWithAttributesGene(
             name,
             fixedFields.map { it.copy() },
             refType,

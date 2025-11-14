@@ -971,7 +971,7 @@ object RestActionBuilderV3 {
                         )
                     }
 
-                    return ObjectGeneWithAttributes(
+                    return ObjectWithAttributesGene(
                         name = schema.xml?.name ?: name,
                         fixedFields = fields,
                         refType = referenceClassDef,
@@ -1146,7 +1146,7 @@ object RestActionBuilderV3 {
             ?: emptyList()
 
         if (attributeNames.isNotEmpty()) {
-            return ObjectGeneWithAttributes(
+            return ObjectWithAttributesGene(
                 name = name,
                 fixedFields = fields,
                 refType = if (schema is ObjectSchema) referenceTypeName ?: schema.title else null,
