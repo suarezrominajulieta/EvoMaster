@@ -2,8 +2,10 @@ package org.evomaster.core.search.gene
 
 import org.evomaster.core.output.OutputFormat
 import org.evomaster.core.search.gene.collection.PairGene
+import org.evomaster.core.search.gene.placeholder.CycleObjectGene
 import org.evomaster.core.search.gene.string.StringGene
 import org.evomaster.core.search.gene.utils.GeneUtils
+import org.evomaster.core.search.gene.wrapper.OptionalGene
 
 class ObjectWithAttributesGene(
     name: String,
@@ -43,46 +45,74 @@ class ObjectWithAttributesGene(
         extraCheck: Boolean
     ): String {
 
+        // --- 1) Para JSON, x-www-form, boolean modes, etc → comportamiento normal
         if (mode != GeneUtils.EscapeMode.XML) {
-            // normal behavior for JSON, etc.
             return super.getValueAsPrintableString(previousGenes, mode, targetFormat, extraCheck)
         }
 
-        val includedFields = fixedFields.filter { it.isPrintable() }
+        // --- 2) Recolectar los campos imprimibles igual que ObjectGene
+        val includedFields = fixedFields
+            .filter { it !is CycleObjectGene }
+            .filter { it !is OptionalGene || (it.isActive && it.gene !is CycleObjectGene) }
+            .filter { it.isPrintable() }
+
+        // --- 3) Separar atributos de hijos
+        val attributeFields = includedFields.filter { attributeNames.contains(it.name) }
+        val childFields = includedFields.filter { !attributeNames.contains(it.name) }
+
+        // --- 4) Preparar atributos en formato XML: key="value"
+        fun xmlEscape(s: String): String =
+            s.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&apos;")
+
+        fun printAttribute(field: Gene): String {
+            val raw = field.getValueAsPrintableString(previousGenes, GeneUtils.EscapeMode.XML, targetFormat)
+            return "${field.name}=\"${xmlEscape(raw.removeSurrounding("\""))}\""
+        }
+
+        val attributesString = attributeFields.joinToString(" ") { printAttribute(it) }
+
         val sb = StringBuilder()
 
-        val attributes = includedFields
-            .filter { attributeNames.contains(it.name) }
-            .joinToString(" ") {
-                "${it.name}=\"${it.getValueAsRawString()}\""
-            }
-
-        // ---- hijos normales (no atributos) ----
-        val childFields = includedFields
-            .filter { !attributeNames.contains(it.name) }
-
-        if (childFields.isEmpty()) {
-            // elemento sin hijos: <Tag a="1"/> o <Tag/>
-            if (attributes.isEmpty()) {
-                sb.append("<$name/>")
-            } else {
-                sb.append("<$name $attributes/>")
-            }
-            return sb.toString()
-        }
-
-        // elemento con hijos
-        if (attributes.isEmpty()) {
+        // --- 5) Caso sin hijos
+        if (attributesString.isEmpty()) {
             sb.append("<$name>")
         } else {
-            sb.append("<$name $attributes>")
+            sb.append("<$name $attributesString>")
         }
 
-        // imprimir cada hijo como tag interno
-        childFields.forEach {
-            sb.append("<${it.name}>")
-            sb.append(it.getValueAsPrintableString(previousGenes, mode, targetFormat))
-            sb.append("</${it.name}>")
+        // --- 6) Contenido de hijos
+        for (child in childFields) {
+
+            // Valor inline si el hijo se llama "value"
+            val childXml = child.getValueAsPrintableString(
+                previousGenes,
+                GeneUtils.EscapeMode.XML,
+                targetFormat
+            )
+
+            val isInlineValue =
+                child.name == "value" &&
+                        !(child is ObjectWithAttributesGene)
+
+            if (isInlineValue) {
+                sb.append(childXml)
+                continue
+            }
+
+            // ObjectWithAttributesGene genera su propio tag
+            if (child is ObjectWithAttributesGene) {
+                sb.append(childXml)
+                continue
+            }
+
+            // Caso general: <child>value</child>
+            sb.append("<${child.name}>")
+            sb.append(childXml)
+            sb.append("</${child.name}>")
         }
 
         sb.append("</$name>")
