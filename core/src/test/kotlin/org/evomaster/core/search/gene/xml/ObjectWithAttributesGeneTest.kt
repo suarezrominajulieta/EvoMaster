@@ -11,36 +11,9 @@ import org.evomaster.core.search.gene.utils.GeneUtils
 
 class ObjectWithAttributesTest {
 
-    @Test
-    fun testXmlPrintWithAttributes1() {
-
-        val person = ObjectWithAttributesGene(
-            name = "person",
-            fixedFields = listOf(
-                StringGene("id", value = "123"), // attribute
-                ObjectWithAttributesGene(
-                    name = "address",
-                    fixedFields = listOf(
-                        StringGene("city", value = "Rome"),
-                        StringGene("country", value = "IT") // attribute
-                    ),
-                    isFixed = true,
-                    attributeNames = setOf("country")
-                )
-            ),
-            isFixed = true,
-            attributeNames = setOf("id")
-        )
-
-        val actual = person.getValueAsPrintableString(mode = GeneUtils.EscapeMode.XML)
-        val expected = "<person id=\"123\"><address country=\"IT\"><city>Rome</city></address></person>"
-
-        assertEquals(expected, actual)
-    }
-
 
     @Test
-    fun testXmlPrintWithAttribute2() {
+    fun testXmlPrintWithAttributesAndValue() {
 
         val person = ObjectWithAttributesGene(
             name = "parent",
@@ -61,129 +34,246 @@ class ObjectWithAttributesTest {
             isFixed = true,
             attributeNames = setOf("attrib1")
         )
-
         val actual = person.getValueAsPrintableString(mode = GeneUtils.EscapeMode.XML)
         val expected = "<parent attrib1=\"true\"><child1 attrib2=\"-1\" attrib3=\"bar\">42</child1><child2>foo</child2></parent>"
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun testXmlEmptyObject() {
+
+        val obj = ObjectWithAttributesGene(
+            name = "empty",
+            fixedFields = emptyList(),
+            isFixed = true,
+            attributeNames = emptySet()
+        )
+
+        val actual = obj.getValueAsPrintableString(mode = GeneUtils.EscapeMode.XML)
+        val expected = "<empty></empty>"
 
         assertEquals(expected, actual)
     }
 
     @Test
-    fun testXmlPrintWithAttribute3() {
+    fun testXmlEmptyAttributeValue() {
 
-        val person = ObjectWithAttributesGene(
-            name = "user",
-            fixedFields = listOf(
-                IntegerGene("id", value = 123),
-                StringGene("name", value = "Alice"),
-                StringGene("email", value = "alice@example.com")
-            ),
+        val obj = ObjectWithAttributesGene(
+            name = "person",
+            fixedFields = listOf(StringGene("id", value = "")),
             isFixed = true,
-            attributeNames = setOf("id", "name")
+            attributeNames = setOf("id")
         )
 
-        val actual = person.getValueAsPrintableString(mode = GeneUtils.EscapeMode.XML)
-        val expected = "<user id=\"123\" name=\"Alice\"><email>alice@example.com</email></user>"
+        val actual = obj.getValueAsPrintableString(mode = GeneUtils.EscapeMode.XML)
+        val expected = "<person id=\"\"></person>"
 
         assertEquals(expected, actual)
     }
 
-
-
     @Test
-    fun testXmlPrintWithAttribute5() {
+    fun testXmlNullAttributeValue() {
 
-        val person = ObjectWithAttributesGene(
-            name = "anInteger",
-            fixedFields = listOf(
-                IntegerGene("anInteger",value = 42),
-                BooleanGene("attrib1", value = false)
-            ),
+        val obj = ObjectWithAttributesGene(
+            name = "item",
+            fixedFields = listOf(IntegerGene("code", value = null)),
             isFixed = true,
-            attributeNames = setOf("attrib1")
+            attributeNames = setOf("code")
         )
 
-
-        val actual = person.getValueAsPrintableString(mode = GeneUtils.EscapeMode.XML)
-        val expected = "<anInteger attrib1=\"false\"><anInteger>42</anInteger></anInteger>"
-        assertEquals(expected,actual)
-
-    }
-
-    @Test
-    fun testXmlPrintWithAttribute6() {
-
-        val person = ObjectWithAttributesGene(
-            name = "anInteger",
-            fixedFields = listOf(
-                IntegerGene("value",value = 42),
-                BooleanGene("attrib1", value = false)
-            ),
-            isFixed = true,
-            attributeNames = setOf("attrib1")
-        )
-
-
-        val actual = person.getValueAsPrintableString(mode = GeneUtils.EscapeMode.XML)
-        val expected = "<anInteger attrib1=\"false\">42</anInteger>"
-        assertEquals(expected,actual)
-
-    }
-
-    /*@Test
-    fun testXmlPrintWithAttribute4() {
-
-        val person = IntegerGene("anInteger",value=42)
-
-
-        val actual = person.getValueAsPrintableString(mode = GeneUtils.EscapeMode.XML)
-        val expected = "<anInteger>42</anInteger>"
+        val actual = obj.getValueAsPrintableString(mode = GeneUtils.EscapeMode.XML)
+        val expected = "<item code=\"0\"></item>"
 
         assertEquals(expected, actual)
-    }*/
+    }
 
     @Test
-    fun testXmlPrintWithAttribute7() {
+    fun testXmlEscaping() {
 
-        val person = ObjectWithAttributesGene(
-            name = "anElement",
+        val obj = ObjectWithAttributesGene(
+            name = "x",
             fixedFields = listOf(
-                BooleanGene("anAttribute",value = false),
+                StringGene("attr", "\"<>&'"),
+                StringGene("value", "\"<>&'")
+            ),
+            isFixed = true,
+            attributeNames = setOf("attr")
+        )
+
+        val actual = obj.getValueAsPrintableString(mode = GeneUtils.EscapeMode.XML)
+        val expected = "<x attr=\"&quot;&lt;&gt;&amp;&apos;\">&quot;&lt;&gt;&amp;&apos;</x>"
+
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun testValueAsTextOnly() {
+
+        val obj = ObjectWithAttributesGene(
+            name = "item",
+            fixedFields = listOf(
                 IntegerGene("value", value = 42)
             ),
             isFixed = true,
-            attributeNames = setOf("anAttribute")
+            attributeNames = emptySet()
         )
 
-
-        val actual = person.getValueAsPrintableString(mode = GeneUtils.EscapeMode.XML)
-        val expected = "<anElement anAttribute=\"false\">42</anElement>"
+        val actual = obj.getValueAsPrintableString(mode = GeneUtils.EscapeMode.XML)
+        val expected = "<item>42</item>"
 
         assertEquals(expected, actual)
     }
 
     @Test
-    fun testXmlPrintWithAttribute8() {
+    fun testValueAttributeAndValueChild() {
 
-        val person = ObjectWithAttributesGene(
-            name = "outerElement",
+        val obj = ObjectWithAttributesGene(
+            name = "node",
             fixedFields = listOf(
-                StringGene("outerAttrib",value = "foo"),
-                ObjectWithAttributesGene("innerElement",
-                    listOf(
-                        StringGene("innerAttrib", value = "bar")),
-                    isFixed = true,
-                    attributeNames = setOf("innerAttrib"))
+                StringGene("value", "childText"),
+                StringGene("value", "attrText")
             ),
             isFixed = true,
-            attributeNames = setOf("outerAttrib")
+            attributeNames = setOf("value")
         )
 
-
-        val actual = person.getValueAsPrintableString(mode = GeneUtils.EscapeMode.XML)
-        val expected = "<outerElement outerAttrib=\"foo\"><innerElement innerAttrib=\"bar\"></innerElement></outerElement>"
+        val actual = obj.getValueAsPrintableString(mode = GeneUtils.EscapeMode.XML)
+        val expected = "<node value=\"childText\" value=\"attrText\"></node>"
 
         assertEquals(expected, actual)
     }
 
+    @Test
+    fun testValueBooleanAsText() {
+
+        val obj = ObjectWithAttributesGene(
+            name = "flag",
+            fixedFields = listOf(
+                BooleanGene("value", false)
+            ),
+            isFixed = true
+        )
+
+        val actual = obj.getValueAsPrintableString(mode = GeneUtils.EscapeMode.XML)
+        val expected = "<flag>false</flag>"
+
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun testValueEmptyString() {
+
+        val obj = ObjectWithAttributesGene(
+            name = "node",
+            fixedFields = listOf(
+                StringGene("value", "")
+            ),
+            isFixed = true
+        )
+
+        val actual = obj.getValueAsPrintableString(mode = GeneUtils.EscapeMode.XML)
+        val expected = "<node></node>"
+
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun testDeepMixedNesting() {
+
+        val root = ObjectWithAttributesGene(
+            name = "root",
+            fixedFields = listOf(
+                StringGene("id", "root1"),
+                ObjectGene(
+                    name = "device",
+                    listOf(
+                        StringGene("model", "XPhone"),
+                        ObjectWithAttributesGene(
+                            name = "location",
+                            fixedFields = listOf(
+                                StringGene("country", "AR"),
+                                ObjectGene(
+                                    name = "gps",
+                                    listOf(
+                                        IntegerGene("lat", 12),
+                                        IntegerGene("lon", 34)
+                                    )
+                                )
+                            ),
+                            isFixed = true,
+                            attributeNames = setOf("country")
+                        )
+                    )
+                )
+            ),
+            isFixed = true,
+            attributeNames = setOf("id")
+        )
+        val actual = root.getValueAsPrintableString(mode = GeneUtils.EscapeMode.XML)
+        val expected =
+            "<root id=\"root1\"><device><model>XPhone</model><location country=\"AR\"><gps><lat>12</lat><lon>34</lon></gps></location></device></root>"
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun testDeepMixedNestingStartingOG() {
+
+        val root = ObjectGene(
+                name = "device",
+                listOf(
+                    StringGene("model", "XPhone"),
+                    ObjectWithAttributesGene(
+                        name = "location",
+                        fixedFields = listOf(
+                            StringGene("country", "AR"),
+                            ObjectGene(
+                                name = "gps",
+                                listOf(
+                                    IntegerGene("lat", 12),
+                                    IntegerGene("lon", 34)
+                                )
+                            )
+                        ),
+                        isFixed = true,
+                        attributeNames = setOf("country")
+                    )
+                )
+        )
+
+        val actual = root.getValueAsPrintableString(mode = GeneUtils.EscapeMode.XML)
+        val expected =
+            "<device><model>XPhone</model><location country=\"AR\"><gps><lat>12</lat><lon>34</lon></gps></location></device>"
+        assertEquals(expected, actual)
+    }
+
+    //tests from ObjectGene
+    @Test
+    fun testBooleanSelectionBase(){
+
+        val foo = StringGene("foo")
+        val bar = IntegerGene("bar")
+        val gene = ObjectWithAttributesGene("parent", listOf(foo, bar))
+
+        val selection = GeneUtils.getBooleanSelection(gene)
+
+        val actual = selection.getValueAsPrintableString(mode = GeneUtils.EscapeMode.BOOLEAN_SELECTION_MODE)
+
+        assertEquals("{foo,bar}", actual)
+    }
+
+    @Test
+    fun testBooleanSelectionNested(){
+
+        val foo = StringGene("foo")
+        val bar = IntegerGene("bar")
+        val hello = StringGene("hello")
+        val nested = ObjectWithAttributesGene("nested", listOf(hello))
+        val gene = ObjectWithAttributesGene("parent", listOf(foo, bar, nested))
+
+        val selection = GeneUtils.getBooleanSelection(gene)
+
+        val actual = selection.getValueAsPrintableString(mode = GeneUtils.EscapeMode.BOOLEAN_SELECTION_MODE)
+
+        assertEquals("{foo,bar,nested{hello}}", actual)
+    }
 }

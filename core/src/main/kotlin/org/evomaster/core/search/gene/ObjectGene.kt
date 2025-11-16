@@ -409,6 +409,10 @@ open class ObjectGene(
                 val v = unwrap(value) ?: return "<$name></$name>"
 
                 return when (v) {
+                    is ObjectWithAttributesGene -> {
+                        v.getValueAsPrintableString(previousGenes, GeneUtils.EscapeMode.XML, targetFormat)
+                    }
+
                     is ObjectGene -> {
                         val inner = v.fields.joinToString("") { f ->
                             serializeXml(f.name, unwrap(f))
