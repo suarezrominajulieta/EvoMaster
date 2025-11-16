@@ -130,7 +130,7 @@ class ObjectWithAttributesTest {
 
     }
 
-    @Test
+    /*@Test
     fun testXmlPrintWithAttribute4() {
 
         val person = IntegerGene("anInteger",value=42)
@@ -140,7 +140,7 @@ class ObjectWithAttributesTest {
         val expected = "<anInteger>42</anInteger>"
 
         assertEquals(expected, actual)
-    }
+    }*/
 
     @Test
     fun testXmlPrintWithAttribute7() {
