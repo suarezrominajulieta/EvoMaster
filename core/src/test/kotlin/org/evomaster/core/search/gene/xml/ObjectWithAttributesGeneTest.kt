@@ -24,7 +24,7 @@ class ObjectWithAttributesTest {
                     fixedFields = listOf(
                         StringGene("attrib2", value = "-1"),
                         StringGene("attrib3", value = "bar"),
-                        IntegerGene("value", value = 42)
+                        IntegerGene("#text", value = 42)
                     ),
                     isFixed = true,
                     attributeNames = setOf("attrib2","attrib3")
@@ -94,7 +94,7 @@ class ObjectWithAttributesTest {
             name = "x",
             fixedFields = listOf(
                 StringGene("attr", "\"<>&'"),
-                StringGene("value", "\"<>&'")
+                StringGene("#text", "\"<>&'")
             ),
             isFixed = true,
             attributeNames = setOf("attr")
@@ -112,7 +112,7 @@ class ObjectWithAttributesTest {
         val obj = ObjectWithAttributesGene(
             name = "item",
             fixedFields = listOf(
-                IntegerGene("value", value = 42)
+                IntegerGene("#text", value = 42)
             ),
             isFixed = true,
             attributeNames = emptySet()
@@ -125,31 +125,12 @@ class ObjectWithAttributesTest {
     }
 
     @Test
-    fun testValueAttributeAndValueChild() {
-
-        val obj = ObjectWithAttributesGene(
-            name = "node",
-            fixedFields = listOf(
-                StringGene("value", "childText"),
-                StringGene("value", "attrText")
-            ),
-            isFixed = true,
-            attributeNames = setOf("value")
-        )
-
-        val actual = obj.getValueAsPrintableString(mode = GeneUtils.EscapeMode.XML)
-        val expected = "<node value=\"childText\" value=\"attrText\"></node>"
-
-        assertEquals(expected, actual)
-    }
-
-    @Test
     fun testValueBooleanAsText() {
 
         val obj = ObjectWithAttributesGene(
             name = "flag",
             fixedFields = listOf(
-                BooleanGene("value", false)
+                BooleanGene("#text", false)
             ),
             isFixed = true
         )
@@ -166,7 +147,7 @@ class ObjectWithAttributesTest {
         val obj = ObjectWithAttributesGene(
             name = "node",
             fixedFields = listOf(
-                StringGene("value", "")
+                StringGene("#text", "")
             ),
             isFixed = true
         )
@@ -275,5 +256,45 @@ class ObjectWithAttributesTest {
         val actual = selection.getValueAsPrintableString(mode = GeneUtils.EscapeMode.BOOLEAN_SELECTION_MODE)
 
         assertEquals("{foo,bar,nested{hello}}", actual)
+    }
+
+    @Test
+    fun testTextCannotBeAttribute() {
+
+        val ex = org.junit.jupiter.api.assertThrows<IllegalStateException> {
+
+            ObjectWithAttributesGene(
+                name = "node",
+                fixedFields = listOf(
+                    StringGene("#text", "value")
+                ),
+                isFixed = true,
+                attributeNames = setOf("#text")  // ilegal
+            ).getValueAsPrintableString(mode = GeneUtils.EscapeMode.XML)
+        }
+
+        assertEquals("#text cannot be used as an attribute in XML", ex.message)
+    }
+
+    @Test
+    fun testDuplicateChildNameThrowsException() {
+
+        val ex = org.junit.jupiter.api.assertThrows<IllegalStateException> {
+
+            ObjectWithAttributesGene(
+                name = "node",
+                fixedFields = listOf(
+                    StringGene("child", "a"),
+                    IntegerGene("child", 123) // duplicado
+                ),
+                isFixed = true,
+                attributeNames = emptySet()
+            ).getValueAsPrintableString(mode = GeneUtils.EscapeMode.XML)
+        }
+
+        assertEquals(
+            "Duplicate child elements not allowed in XML: [child]",
+            ex.message
+        )
     }
 }

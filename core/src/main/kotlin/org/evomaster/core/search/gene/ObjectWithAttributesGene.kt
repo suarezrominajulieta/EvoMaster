@@ -57,6 +57,21 @@ class ObjectWithAttributesGene(
         val attributeFields = includedFields.filter { attributeNames.contains(it.name) }
         val childFields = includedFields.filter { !attributeNames.contains(it.name) }
 
+        // 1) "#text" CANNOT be an attribute
+        if (attributeFields.any { it.name == "#text" }) {
+            throw IllegalStateException("#text cannot be used as an attribute in XML")
+        }
+
+        // 2) Child names must be unique (XML does not allow repeated element names at this level)
+        val duplicated = childFields
+            .groupBy { it.name }
+            .filter { it.value.size > 1 }
+            .keys
+
+        if (duplicated.isNotEmpty()) {
+            throw IllegalStateException("Duplicate child elements not allowed in XML: $duplicated")
+        }
+
         fun xmlEscape(s: String): String =
             s.replace("&", "&amp;")
                 .replace("<", "&lt;")
@@ -87,9 +102,7 @@ class ObjectWithAttributesGene(
                 targetFormat
             )
 
-            val isInlineValue =
-                child.name == "value" &&
-                        !(child is ObjectWithAttributesGene)
+            val isInlineValue = child.name == "#text" && !(child is ObjectWithAttributesGene)
 
             if (isInlineValue) {
                 sb.append(childXml)

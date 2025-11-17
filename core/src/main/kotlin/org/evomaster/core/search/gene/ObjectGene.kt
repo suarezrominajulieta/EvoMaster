@@ -406,6 +406,15 @@ open class ObjectGene(
             }
 
             fun serializeXml(name: String, value: Any?): String {
+
+                if (name == "#text") {
+                    return when (val v = unwrap(value)) {
+                        is Gene -> getPrintedValue(v)
+                        null -> ""
+                        else -> escapeXmlSafe(v.toString())
+                    }
+                }
+
                 val v = unwrap(value) ?: return "<$name></$name>"
 
                 return when (v) {
