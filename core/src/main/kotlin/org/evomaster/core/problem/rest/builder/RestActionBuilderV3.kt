@@ -980,6 +980,8 @@ object RestActionBuilderV3 {
                         additionalFields = mutableListOf(),
                         attributeNames = attributeNames
                     )
+                }else{
+                    return createObjectGene(name, schema, schemaHolder,currentSchema, history, referenceClassDef, options, examples, messages)
                 }
             }
             //TODO file is a hack. I want to find a more elegant way of dealing with it (BMR)
